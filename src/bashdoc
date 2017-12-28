@@ -1,0 +1,66 @@
+#!/bin/bash
+
+### bashdoc [ "-"SECTION ] FILES ... Usage:help
+#
+# Provide the files you want to print the internal documentation for.
+#
+# By default, prints the "bbuild" documentation sections.
+#
+# To print just the "api" sections, call
+#
+# 	bashdoc -api ...
+#
+###/doc
+
+#%include autohelp.sh out.sh searchpaths.sh
+
+# Nothing specified, just list known modules
+if [[ -z "$*" ]]; then
+	out:info "Available modules: "
+
+	echo "$BBPATH"|sed 's/:/\n/g'|while read THEPATH; do
+		out:warn "Checking $THEPATH"
+		ls "$THEPATH"|while read f; do
+			if [[ -f "$THEPATH/$f" ]]; then
+				echo -n "$f "
+			fi
+		done
+		echo
+	done
+	echo
+	exit
+fi
+
+# ====================================================================
+# Get the section, if specified.
+
+SECTION='bbuild'
+
+if [[ "${1:0:1}" = "-" ]]; then
+	SECTION="${1:1}"
+	shift
+fi
+
+out:info "Seeking section [$SECTION] on all files."
+
+# =================
+# Process files
+
+for file in "$@"; do
+	if [[ ! -f "$file" ]]; then
+		fulpath="$(searchpaths:file_from "$BBPATH" "$file")"
+		if [[ -n "$fulpath" ]]; then
+			file="$fulpath"
+		fi
+	fi
+
+	if [[ ! -f "$file" ]]; then
+		out:warn "No such file [$file]"
+		continue
+	fi
+
+	# Also print the tags for info
+	egrep '^#%bbtags' "$file"
+
+	autohelp:print "$SECTION" "$file"
+done

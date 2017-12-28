@@ -1,0 +1,166 @@
+#!/bin/bash
+
+# An example bash script using bash builder
+
+# Best practices - bail on error (-e), undeclared variable dereferencing is also an error (-u), and fail entire pipe if a component fails (-o pipefail)
+set -euo pipefail
+
+# ----------------------------------------------------------
+# Put the autohelp text at the top of the file, above your imports, so it is visible before any code
+
+### SSH Connection Manager Usage:help
+#
+# Keep tabs on your SSH connections, run commands on the same group of ssh-enabled hosts.
+#
+# USAGE
+#	
+#	connect [CHOICESPEC] /run COMMAND ...
+#	connect [CHOICESPEC] /key
+# 	connect [CHOICESPEC] { /push REMOTEDIR LOCALFILES ... | /pull LOCALDIR REMOTFILES ... | /run COMMAND ...}
+# 	connect { /add SERVERSPEC | /del SERVERSPEC }
+#
+# Used without action, `connect` presents list of servers to choose from.
+#
+# Choose a server by typing its index number, or a string of characters that match a single server from the list.
+#
+# Where CHOICESPEC can be used, specify the choice to pre-populate. Multiple-choices can only be used on `scp` and `run` commands.
+#	
+#	connect 3
+#		will choose host 3
+#
+# 	connect 5,7
+# 		will apply the run or scp command to hosts 5, 6 and 7
+#	
+#	connect test
+#		will apply the run or scp command to all hosts with "test" in the server spec name
+#
+# When specified with actions:
+#
+# /add SERVERSPEC
+#
+# 	Add SERVERSPEC to the list of servers.
+#
+# 	SERVERSPEC is a hostname, optionally with a username and/or port:
+#
+# 		host.example.com
+#
+# 		host.example.com:8022
+#
+# 		user@host
+#
+# 		user@host:922
+#
+# /del SERVERSPEC
+#
+# 	Remove the specified server from the list. SERVERSPEC is used to match the appropriate host definition.
+# 	If several hosts are found, all are removed.
+#
+# /push DESTINATION FILES ...
+#
+# 	Use scp to copy files to the specified server, into the specified destination:
+#
+#	 	connect server1 /push ./www myhtml/file1.html
+#
+# /pull DESTINATION REMOTEFILES ...
+#
+# 	Use scp to copy files from the specified server, into the local destination:
+#
+# 		connect server1 /pull ./localdir remote_file1 remote_file2
+#
+# /run COMMAND ...
+#
+# 	Run a command (with arguments) on the chosen servers.
+#
+# 	Multiple servers can be chosen.
+#
+# /key
+#
+# 	Copy public key to target servers.
+#
+# 	Multiple servers can be chosen.
+#
+###/doc
+
+# ----------------------------------------------------------
+# Import runmain, autohelp, and version manager for some conveniences
+#   runmain - runs the script if and only if the script is named accordingly
+#
+#   autohelp - processes the top help comments and uses them in --help display
+
+#%include runmain.sh autohelp.sh
+
+# ----------------------------------------------------------
+# Import elements you intend to use
+
+#%include out.sh askuser.sh
+
+# ----------------------------------------------------------
+# Include our local scripts
+# By default, the same directory as contains the current script is also part of BBPATH
+
+#%include direct_connect.sh manage_servers.sh choosing.sh
+
+# ----------------------------------------------------------
+# Configuration variables
+# Use the `: ${VARNAME=DEFAULT_VALUE}` to assign a default value if-and-only-if the variable is unassigned
+: ${SERVERS_FILE="$HOME/.config/server_list"}
+
+# Define a main function, call it only at the end of the file
+# In best practice, avoid using global variables or instructions not wrapped in a function
+#  except for configuration variables
+
+main() {
+	if [[ -n "$*" ]]; then
+		out:debug "Processing actions ..."
+		process_action "$@"
+	else
+		out:debug "Just connect"
+		ssh_connect
+	fi
+}
+
+process_action() {
+	local action="$1"; shift
+	out:debug "Action: $action"
+
+	if [[ ! "$action" =~ ^/ ]]; then
+		out:debug "Action is choice"
+		choose="$action"
+		action="${1:-}" ; shift || :
+	fi
+
+	if [[ -z "$action" ]]; then
+		out:debug "Simple connection"
+		ssh_connect ; exit $?
+	fi
+
+	out:debug "Action is now $action"
+
+	case "$action" in
+	/add)
+		add_server "$@"
+		;;
+	/del)
+		delete_server "$@"
+		;;
+	/push|/pull)
+		copyover_files "$action" "$@"
+		;;
+	/run)
+		ssh_run "$@"
+		;;
+	/key)
+		ssh_copykey "$@"
+		;;
+	*)
+		out:fail "Unknown action $action"
+		;;
+	esac
+}
+
+init_serverfile() {
+	mkdir -p "$(dirname "$SERVERS_FILE")"
+	touch "$SERVERS_FILE"
+}
+
+runmain connect main "$@"

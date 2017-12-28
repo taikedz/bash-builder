@@ -1,0 +1,4 @@
+BBFILES=(src/bbuild src/bashdoc)
+#BUILDOUTD=bin
+SHELLCHECK=false
+BBPATH=bash-libs/libs/:src/:./
