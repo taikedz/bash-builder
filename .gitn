@@ -1,7 +1,1 @@
 GSETTING_remote=origin
-
-# Make sure we don't blindly push common
-if (git status|egrep '^\s+'|grep common/ -q); then
-	#MODE_DEBUG=yes breake "$GITARGS_action / Commit files from common ? (type quit to abort)"
-	warne "Remember to operate on files from common in a separate branch"
-fi
