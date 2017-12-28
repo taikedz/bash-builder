@@ -6,12 +6,6 @@ A toolset for managing bash snippets/libraries, and managing in-line documentati
 
 For more on writing cleaner bash scripts, see the [clean writing notes](writing_clean_bash.md).
 
-## Project status
-
-The bash builder toolset is in development of its fourth version.
-
-The `#%include`-processing code is now even more efficient, and single bash scripts can be efficiently compiled.
-
 ## What is this?
 
 Bash Builder is a tool to help writing bash scripts as multiple files, but compiling and distributing as a single file. Note that this is specifically for GNU bash - strict POSIX `sh` usage is not supported.
@@ -69,7 +63,7 @@ Use the `#%include` directive in your scripts to import snippets from the builde
 	# Include a file on a path in the same directory as the specified script
 	#%include src/morescript.sh
 
-The output will be placed in a `bbuild-outd` directory.
+The output will be placed in a `bbuild-outd` directory (or, whatever directory is specified by `$BUILDOUTD`).
 
 If you have `shellcheck` installed, you can also have it run against the compiled script.
 
@@ -95,7 +89,9 @@ This prints the documentation for the `out.sh` script.
 
 ### Default library
 
-If you installed as root, the default library from `bash-libs/libs/` are installed to `/usr/local/lib/bbuild`, otherwise they are installed to `~/.local/lib/bbuild`
+The default library is hosted in a separate repository at https://github.com/taikedz/bash-libs ; it is cloned locally during install.
+
+If you installed as root, the default library from `bash-libs/libs/` is installed to `/usr/local/lib/bbuild`, otherwise they are installed to `~/.local/lib/bbuild`
 
 You can configure `$BBPATH` in your `.bashrc` file to point to a series of custom locations for scripts, each path is separated by a colon `:`. By default, BBPATH is automatically set to `~/.local/lib/bbuild:/usr/local/lib/bbuild`.
 

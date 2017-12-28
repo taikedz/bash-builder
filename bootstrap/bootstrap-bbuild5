@@ -889,4 +889,4 @@ function main {
 	done
 }
 
-runmain bbuild main "$@"
+main "$@"

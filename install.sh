@@ -2,9 +2,9 @@
 
 cd "$(dirname "$0")"
 libsurl="https://github.com/taikedz/bash-libs"
-libshere=./bash-libs/libs
+libsdir=./bash-libs/libs
 
-if [[ ! -d "$libshere" ]]; then
+if [[ ! -d "$libsdir" ]] && [[ ! -L "$libsdir" ]]; then
 	git clone "$libsurl" || {
 		echo "Could not clone default libraries repo [$libsurl]"
 		exit 1
@@ -32,14 +32,14 @@ fi
 mkdir -p "$libs"
 mkdir -p "$binsd"
 
-cp "$libshere"/* "$libs/"
+cp "$libsdir"/* "$libs/"
 if [[ "$UID" = 0 ]]; then
 	chmod 644 "$libs"/*
 fi
 
 BUILDFILES=(src/bashdoc src/bbuild)
 
-BBPATH="$libshere" BUILDOUTD="$binsd" bash bootstrap/bootstrap-bbuild4 "${BUILDFILES[@]}" "$@"
+BBPATH="$libsdir" BUILDOUTD="$binsd" bash bootstrap/bootstrap-bbuild5 "${BUILDFILES[@]}" "$@" || exit 1
 
 echo -e "\033[32;1mSuccessfully installed\033[0m"
 
