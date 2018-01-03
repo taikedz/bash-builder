@@ -99,6 +99,23 @@ or
 
 Rmember the rule of thumb: no function should have more than around 15-20 lines of operational code (not counting variable declarations and other "setup" and "teardown" code).
 
+### Do not use naked code
+
+A program should have one and only one entry point: its `main` function. Trying to hunt down execution flow problems when you're not sure where to start is tedious.
+
+As a scripting language, bash permits writing code without wrapping it in a function. Most of the time, this is alright, but when writing code for re-use, it is nearly always best to encapsulate it in a function. You never know when you're going to import that code and *not* expect it to run until you ask it to run.
+
+As such, wrap all your code inside functions, and have only a single bare call to the main function (call it whatever you want) - for example
+
+	mymain() {
+		echo "Arguments were:"
+		for arg in "$@"; do
+			echo "  $arg"
+		done
+	}
+
+	mymain "$@"
+
 ### Namespace your functions
 
 > `bash` only. In `sh`, use `_` (underscore)
