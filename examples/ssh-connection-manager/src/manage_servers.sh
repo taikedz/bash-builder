@@ -4,7 +4,10 @@ add_server() {
 
 	local target="$1"; shift
 
-	echo -e "%\t$target # $*" >> "$SERVERS_FILE"
+	local addmessage="$*"
+	[[ -z "$addmessage" ]] || addmessage=" # $addmessage"
+
+	echo -e "%\t${target}${addmessage}" >> "$SERVERS_FILE"
 }
 
 delete_server() {
