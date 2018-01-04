@@ -12,11 +12,11 @@ if [[ ! -d "$libsdir" ]] && [[ ! -L "$libsdir" ]]; then
 fi
 
 if [[ "$UID" == 0 ]]; then
-	libs=/usr/local/lib/bbuild
+	export libs=/usr/local/lib/bbuild
 	binsd=/usr/local/bin
 	BASHRCPATH=/etc/bash.bashrc
 else
-	libs="$HOME/.local/lib/bbuild"
+	export libs="$HOME/.local/lib/bbuild"
 	binsd="$HOME/.local/bin"
 	BASHRCPATH="$HOME/.bashrc"
 fi
@@ -29,20 +29,17 @@ if ! grep "BBPATH=" "$BASHRCPATH" -q; then
 	echo "export BBPATH=\"$libs\"" >> "$BASHRCPATH"
 fi
 
-mkdir -p "$libs"
 mkdir -p "$binsd"
 
-cp "$libsdir"/* "$libs/"
-if [[ "$UID" = 0 ]]; then
-	chmod 644 "$libs"/*
-fi
+bash bash-libs/install.sh
 
 BUILDFILES=(src/bashdoc src/bbuild)
 
-BBPATH="$libsdir" BUILDOUTD="$binsd" bash bootstrap/bootstrap-bbuild5 "${BUILDFILES[@]}" "$@" || exit 1
+BBPATH="$libsdir" bash bootstrap/bootstrap-bbuild5 "${BUILDFILES[@]}" "$@" || exit 1
+cp ./build-outd/bbuild ./build-outd/bashdoc "$binsd/"
 
-echo -e "\033[32;1mSuccessfully installed\033[0m"
+echo -e "\033[32;1mSuccessfully installed 'bbuild' to [$binsd]\033[0m"
 
 if ! which shellcheck 2>&1 >/dev/null ; then
-	echo 'Consider installing "shellcheck"'
+	echo -e '\n\tConsider installing "shellcheck"\n'
 fi
