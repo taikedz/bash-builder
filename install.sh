@@ -60,3 +60,5 @@ main() {
 	environment_configuration
 	run_build
 }
+
+main "$@"
