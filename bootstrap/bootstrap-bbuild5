@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION_NUM=5.0.0
+VERSION_NUM=5.0.1
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {
@@ -102,8 +102,8 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 ###/doc
 
 function runmain {
-	local required_name="$1"; shift
-	local funcall="$1"; shift
+	local required_name="$1"; shift || :
+	local funcall="$1"; shift || :
 	local scriptname="$(basename "$0")"
 
 	if [[ "$required_name" = "$scriptname" ]]; then
@@ -113,10 +113,10 @@ function runmain {
 
 #!/bin/bash
 
-### autohelp:print Usage:bbuild
+### autohelp:print [ SECTION [FILE] ] Usage:bbuild
 # Write your help as documentation comments in your script
 #
-# If you need to output the help from a running script, call the
+# If you need to output the help from your script, or a file, call the
 # `autohelp:print` function and it will print the help documentation
 # in the current script to stdout
 #
@@ -131,22 +131,27 @@ function runmain {
 #	#
 #	###/doc
 #
+# You can set a different help section by specifying a subsection
+#
+# 	autohelp:print section2
+#
+# > This would print a section defined in this way:
+#
+# 	### Some title Usage:section2
+# 	# <some content>
+# 	###/doc
+#
 # You can set a different comment character by setting the 'HELPCHAR' environment variable:
 #
 # 	HELPCHAR=%
-# 	autohelp:print
-#
-# You can set a different help section by specifying the 'SECTION_STRING' variable
-#
-# 	SECTION_STRING=subsection autohelp:print
 #
 ###/doc
 
 HELPCHAR='#'
 
 function autohelp:print {
-	local SECTION_STRING="${1:-}"; shift
-	local TARGETFILE="${1:-}"; shift
+	local SECTION_STRING="${1:-}"; shift || :
+	local TARGETFILE="${1:-}"; shift || :
 	[[ -n "$SECTION_STRING" ]] || SECTION_STRING=help
 	[[ -n "$TARGETFILE" ]] || TARGETFILE="$0"
 
@@ -175,277 +180,47 @@ function autohelp:print {
 	echo ""
 }
 
-### automatic help Usage:main
+### autohelp:paged Usage:bbuild
 #
-# automatically call help if "--help" is detected in arguments
-#
-###/doc
-if [[ "$*" =~ --help ]]; then
-	cols="$(tput cols)"
-	autohelp:print | fold -w "$cols" -s || autohelp:print
-	exit 0
-fi
-#!/bin/bash
-
-### includefile.sh Usage:bbuild
-#
-# Utility to allow developer-defined inclusion directives in files being processed.
+# Display the help in the pager defined in the PAGER environment variable
 #
 ###/doc
-
-#!/bin/bash
-
-# FIXME - set function signature in head of help
-### searchpaths:file_from PATHDEF FILE Usage:bbuild
-#
-# Locate a file along a search path.
-#
-# EXAMPLE
-#
-# The following will look for each of the files
-#  in order of preference of a local lib directory, a profile-wide one, then a system-
-#  wide one.
-#
-#	MYPATH="./lib:$HOME/.local/lib:/usr/local/lib"
-# 	searchpaths:file_from "$MYPATH" file
-#
-# Echoes the path of the first file found.
-#
-# Returns 1 on failure to find any file.
-#
-###/doc
-
-function searchpaths:file_from {
-	local PATHS="$1"; shift
-	local FILE="$1"; shift
-
-	out:debug "Looking for file [$FILE] amongst [$PATHS]"
-
-	for path in $(echo "$PATHS"|tr ':' ' '); do
-		out:debug "Try path: $path"
-		local fpath="$path/$FILE"
-		if [[ -f "$fpath" ]]; then
-			echo "$fpath"
-			return
-		else
-			out:debug "No $fpath"
-		fi
-	done
-	return 1
-}
-#!/bin/bash
-
-### abspath Usage:bbuild
-# Returns the absolute path of a file/directory
-#
-# Exposes two functions
-#
-#     abspath:path
-#     abspath:simple
-#
-# Do not use the python-based 'abspath:path' for intensitve resolution;
-# instead, use native 'abspath:simple' which is at least 170 times
-# more efficient, at the cost of perhaps being potentially
-# dumber (simply collapses '/./' and '/../').
-# 
-# Neither utility expands softlinks.
-#
-# If python is not found, abspath:path falls back to abspath:simple systematically.
-###/doc
-
-function abspath:path {
-	local newvar=${1//"'"/"\\'"}
-	(
-		set +eu
-		if which python >/dev/null 2>&1; then
-			python  -c "import os ; print os.path.abspath('$newvar')"
-		elif which python3 >/dev/null 2>&1 ; then
-			python3 -c "import os ; print(os.path.abspath('$newvar') )"
-		else
-			abspath:simple "$newvar"
-		fi
-	)
+function autohelp:paged {
+	: ${PAGER=less}
+	autohelp:print "$@" | $PAGER
 }
 
-# More efficient by a factor of at least 170:1
-# compared to spinning up a python process every time
-function abspath:simple {
-	local workpath="$1"
-	if [[ "${workpath:0:1}" != "/" ]]; then workpath="$PWD/$workpath"; fi
-	for x in {1..50}; do # set a limit on how many iterations - only very stupid paths will get us here.
-		if [[ "$workpath" =~ '/../' ]] || [[ "$workpath" =~ '/./' ]]; then
-			workpath="$(echo "$workpath"|sed -r -e 's#/./#/#g' -e 's#([^/]+)/../#\1/#g' -e 's#/.$##' -e 's#([^/]+)/..$#\1#' )"
-		else
-			echo "$workpath"
-			return 0
-		fi
-	done
-	return 1 # hopefully we never get here
-}
-
-### includefile:include INFILE PATTERN [SEARCHPATHS] Usage:bbuild
+### autohelp:check Usage:bbuild
 #
-# Inserts the contents of the files specified on lines matched by PATTERN into the stream of INFILE
-# at the location they are declared.
+# Automatically print help and exit if "--help" is detected in arguments
 #
-# Inclusion directives must stand alone on their lines.
+# Example use:
 #
-# Example:
+#	#!/bin/bash
 #
-# 	This is some content in the FILE called myfile.txt
+#	### Some help Usage:help
+#	#
+#	# Some help text
+#	#
+#	###/doc
 #
-# 	@@include external_file.txt external_2.txt
+#	#%include autohelp.sh
 #
-# 	We cannot include in the middle of a line. The following
-# 	line will not be processed:
+#	main() {
+#		autohelp:check "$@"
 #
-# 	( some line with @@inclusion file1 file2 )
+#		# now add your code
+#	}
 #
-# We can call this to include the contents of each file:
-#
-# 	includefile:include myfile.txt '@@include'
-#
-# The result will be something like
-#
-# 	This is some content in the FILE called myfile.txt
-#
-# 	(file1 contents)
-#
-# 	(file2 contents)
-#
-# 	We cannot include in the middle of a line. The following
-# 	line will not be processed:
-#
-# 	( some line with @@inclusion file1 file2 )
-#
-# Note that files for inclusion MUST NOT have spaces in their names, or in their paths.
-#
-# SEARCH PATHS
-# ============
-#
-# You can specify a colon (":") -separated list of directories wherein to search for files by calling
-#
-# 	includefile:include FILE PAT SEARCHPATHS
-#
-# This will search for the inclusions specified only along the specified paths. Example:
-#
-# 	includefile:include myfile.html '//!addstyle' "./importedstyles:$HOME/.local/lib/styles:/etc/htmlthing/styles"
-# 
-# This will seek to include the files named in the inclusion line of myfile.html first from a local ./importedstyles,
-#  then from a general home configuration, and finally if it has found the file in neither the previous, it will be
-#  searched for in the global configuration.
-#
-# If not specified, the default search path is simply the containing directory of myfile.html.
+#	main "$@"
 #
 ###/doc
-
-function includefile:include {
-	local INFILE="$1"; shift
-	local PATTERN="$1"; shift
-	local PATHS="$*"
-
-	 while read inline; do
-		out:debug "[36;1mInclusion target: $inline[0m"
-	 	local pos="${inline%%:*}"
-		inline="${inline#*:}"
-
-		local inclusiontargets="${inline#$PATTERN }"
-
-		# reverse inclusion targets
-		# to insert always at same line, but preserve order of declaration
-		local revintar=
-		for targetfile in $inclusiontargets ; do
-			revintar="$targetfile $revintar"
-		done
-
-		for targetfile in $revintar; do
-			if [[ -z "$targetfile" ]]; then continue; fi
-			local filepath="$(searchpaths:file_from "$PATHS" "$targetfile")"
-			if [[ ! -f "$filepath" ]]; then
-				out:warn "Could not find $targetfile in any of $PATHS"
-				return 1
-			fi
-			includefile:fileinsert "$filepath" "$pos" "$INFILE"
-		done
-
-		sed "$pos d" -i "$INFILE"
-	 done < <(grep -P "^$PATTERN" "$INFILE" -n | sort -r -n)
-}
-
-### includefile:fileinsert SOURCEFILE POSITION TARGETFILE Usage:bbuild
-#
-# Insert the contents of SOURCEFILE into TARGETFILE after line at POSITION
-#
-###/doc
-function includefile:fileinsert {
-	local SOURCEFILE="$(abspath:simple $1)"; shift
-	local POSITION="$1"; shift
-	local TARGETFILE="$1"; shift
-
-	local SKIPFILE="$(includefile:getskipfile "$TARGETFILE")"
-
-	if includefile:registerfile "$SKIPFILE" "$SOURCEFILE"; then
-		out:debug "Inserting $SOURCEFILE at $TARGETFILE:$POSITION"
-
-		includefile:docallback "$SOURCEFILE" "$TARGETFILE"
-
-		sed "$POSITION r $SOURCEFILE" -i "$TARGETFILE"
+autohelp:check() {
+	if [[ "$*" =~ --help ]]; then
+		cols="$(tput cols)"
+		autohelp:print | fold -w "$cols" -s || autohelp:print
+		exit 0
 	fi
-}
-
-function includefile:docallback {
-	if [[ -n "$FILEINCLUDES_CALLBACK" ]]; then
-		"$FILEINCLUDES_CALLBACK" "$@"
-	fi
-}
-
-# Initialize the temp file
-function includefile:inittemp {
-	echo > "$(includefile:getskipfile "$1")"
-}
-
-# Get skipfile for path
-# getskipfile TARGETPATH
-# prints a temp file path in /tmp
-function includefile:getskipfile {
-	local tmpdir=/tmp/bbinclude
-	mkdir -p "$tmpdir"
-	
-	local hash="$(echo "$1"|sha1sum)"
-	hash="${hash:0:6}"
-
-	local skipfile="$tmpdir/$hash"
-	touch "$skipfile"
-	echo "$skipfile"
-}
-
-# Internal method
-# Register that a file has previously been included
-# Returns 1 if already registered
-function includefile:registerfile {
-	local SKIPFILE="$1"; shift
-	local TARGETFILE="$1"; shift
-
-	if includefile:isregistered "$SKIPFILE" "$TARGETFILE"; then
-		return 1
-	fi
-
-	echo "$TARGETFILE" >> "$SKIPFILE"
-}
-
-# Internal method
-# check if file has already been reigstered
-# returns 0 if yes
-# returns 1 otherwise
-function includefile:isregistered {
-	local SKIPFILE="$1"; shift
-	local TARGETFILE="$1"; shift
-
-	if grep -P -q "^$TARGETFILE$" "$SKIPFILE"; then
-		return 0
-	fi
-
-	return 1
 }
 #!/bin/bash
 
@@ -456,17 +231,23 @@ function includefile:isregistered {
 #
 # Example:
 # 	
-# 	echo "${CRED}Some red text ${CBBLU} some blue text $CDEF some text in the terminal's default colour"
+# 	echo -e "${CRED}Some red text ${CBBLU} some blue text $CDEF some text in the terminal's default colour"
+#
+# Requires processing of escape characters.
 #
 # Colours available:
 #
-# CDEF -- switches to the terminal default
+# CRED, CBRED, HLRED -- red, bold red, highlight red
+# CGRN, CBGRN, HLGRN -- green, bold green, highlight green
+# CYEL, CBYEL, HLYEL -- yellow, bold yellow, highlight yellow
+# CBLU, CBBLU, HLBLU -- blue, bold blue, highlight blue
+# CPUR, CBPUR, HLPUR -- purple, bold purple, highlight purple
+# CTEA, CBTEA, HLTEA -- teal, bold teal, highlight teal
 #
-# CRED, CBRED -- red, bold red
-# CGRN, CBGRN -- green, bold green
-# CYEL, CBYEL -- yellow, bold yellow
-# CBLU, CBBLU -- blue, bold blue
-# CPUR, CBPUR -- purple, bold purple
+# CDEF -- switches to the terminal default
+# CUNL -- add underline
+#
+# Note that highlight and underline must be applied or re-applied after specifying a colour.
 #
 ###/doc
 
@@ -475,11 +256,22 @@ export CGRN="\033[0;32m"
 export CYEL="\033[0;33m"
 export CBLU="\033[0;34m"
 export CPUR="\033[0;35m"
+export CTEA="\033[0;36m"
+
 export CBRED="\033[1;31m"
 export CBGRN="\033[1;32m"
 export CBYEL="\033[1;33m"
 export CBBLU="\033[1;34m"
 export CBPUR="\033[1;35m"
+export CBTEA="\033[1;36m"
+
+export HLRED="\033[41m"
+export HLGRN="\033[42m"
+export HLYEL="\033[43m"
+export HLBLU="\033[44m"
+export HLPUR="\033[45m"
+export HLTEA="\033[46m"
+
 export CDEF="\033[0m"
 
 ### Console output handlers Usage:bbuild
@@ -490,21 +282,46 @@ export CDEF="\033[0m"
 
 ### Environment Variables Usage:bbuild
 #
-# MODE_DEBUG : set to 'yes' to enable debugging output
-# MODE_DEBUG_VERBOSE : set to 'yes' to enable command echoing
+# MODE_DEBUG : set to 'true' to enable debugging output
+# MODE_DEBUG_VERBOSE : set to 'true' to enable command echoing
 #
 ###/doc
 
-: ${MODE_DEBUG=no}
-: ${MODE_DEBUG_VERBOSE=no}
+: ${MODE_DEBUG=false}
+: ${MODE_DEBUG_VERBOSE=false}
+
+# Internal
+function out:buffer_initialize {
+	OUTPUT_BUFFER_defer=(:)
+}
+out:buffer_initialize
 
 ### out:debug MESSAGE Usage:bbuild
 # print a blue debug message to stderr
-# only prints if MODE_DEBUG is set to "yes"
+# only prints if MODE_DEBUG is set to "true"
 ###/doc
 function out:debug {
-	if [[ "$MODE_DEBUG" = yes ]]; then
-		echo -e "${CBBLU}DEBUG:$CBLU$*$CDEF" 1>&2
+	if [[ "$MODE_DEBUG" = true ]]; then
+		echo -e "${CBBLU}DEBUG: $CBLU$*$CDEF" 1>&2
+	fi
+}
+
+### out:debug:fork [MARKER] Usage:bbuild
+#
+# Pipe the data coming through stdin to stdout
+#
+# If debug mode is on, *also* write the same data to stderr, each line preceded by MARKER
+#
+# Insert this debug fork into pipes to see their output
+#
+###/doc
+function out:debug:fork {
+	if [[ "$MODE_DEBUG" = true ]]; then
+		local MARKER="${1:-DEBUG: }"; shift || :
+
+		cat - | sed -r "s/^/$MARKER/" | tee -a /dev/stderr
+	else
+		cat -
 	fi
 }
 
@@ -519,7 +336,41 @@ function out:info {
 # print a yellow warning message to stderr
 ###/doc
 function out:warn {
-	echo -e "${CBYEL}WARN:$CYEL $*$CDEF" 1>&2
+	echo -e "${CBYEL}WARN: $CYEL$*$CDEF" 1>&2
+}
+
+### out:defer MESSAGE Usage:bbuild
+# Store a message in the output buffer for later use
+###/doc
+function out:defer {
+	OUTPUT_BUFFER_defer[${#OUTPUT_BUFFER_defer[@]}]="$*"
+}
+
+### out:flush HANDLER ... Usage:bbuild
+#
+# Pass the output buffer to the command defined by HANDLER
+# and empty the buffer
+#
+# Examples:
+#
+# 	out:flush echo -e
+#
+# 	out:flush out:warn
+#
+# (escaped newlines are added in the buffer, so `-e` option is
+#  needed to process the escape sequences)
+#
+###/doc
+function out:flush {
+	[[ -n "$*" ]] || out:fail "Did not provide a command for buffered output\n\n${OUTPUT_BUFFER_defer[*]}"
+
+	[[ "${#OUTPUT_BUFFER_defer[@]}" -gt 1 ]] || return 0
+
+	for buffer_line in "${OUTPUT_BUFFER_defer[@]:1}"; do
+		"$@" "$buffer_line"
+	done
+
+	out:buffer_initialize
 }
 
 ### out:fail [CODE] MESSAGE Usage:bbuild
@@ -532,11 +383,20 @@ function out:fail {
 	local numpat='^[0-9]+$'
 
 	if [[ "$1" =~ $numpat ]]; then
-		ERCODE="$1"; shift
+		ERCODE="$1"; shift || :
 	fi
 
-	echo -e "${CBRED}ERROR FAIL:$CRED$*$CDEF" 1>&2
+	echo -e "${CBRED}ERROR FAIL: $CRED$*$CDEF" 1>&2
 	exit $ERCODE
+}
+
+### out:error MESSAGE Usage:bbuild
+# print a red error message to stderr
+#
+# unlike out:fail, does not cause script exit
+###/doc
+function out:error {
+	echo -e "${CBRED}ERROR: ${CRED}$*$CDEF" 1>&2
 }
 
 ### out:dump Usage:bbuild
@@ -560,27 +420,183 @@ function out:dump {
 #
 # Add break points to a script
 #
-# Requires debug mode set to yes
+# Requires MODE_DEBUG set to true
 #
 # When the script runs, the message is printed with a propmt, and execution pauses.
+#
+# Press return to continue execution.
 #
 # Type `exit`, `quit` or `stop` to stop the program. If the breakpoint is in a subshell,
 #  execution from after the subshell will be resumed.
 #
-# Press return to continue execution.
-#
 ###/doc
 
 function out:break {
-	[[ "$MODE_DEBUG" = yes ]] || return
+	[[ "$MODE_DEBUG" = true ]] || return 0
 
-	read -p "${CRED}BREAKPOINT: $* >$CDEF " >&2
+	echo -en "${CRED}BREAKPOINT: $* >$CDEF " >&2
+	read
 	if [[ "$REPLY" =~ quit|exit|stop ]]; then
 		out:fail "ABORT"
 	fi
 }
 
-[[ "$MODE_DEBUG_VERBOSE" = yes ]] && set -x || :
+if [[ "$MODE_DEBUG_VERBOSE" = true ]]; then
+	set -x
+fi
+### File Inclusion Usage:bbuild
+# Library for including (once) or inserting (any time called) external files ontents
+# based on developer-defined tokens
+##/doc
+
+
+# FIXME - set function signature in head of help
+### searchpaths:file_from PATHDEF FILE Usage:bbuild
+#
+# Locate a file along a search path.
+#
+# EXAMPLE
+#
+# The following will look for each of the files
+#  in order of preference of a local lib directory, a profile-wide one, then a system-
+#  wide one.
+#
+#	MYPATH="./lib:$HOME/.local/lib:/usr/local/lib"
+# 	searchpaths:file_from "$MYPATH" file
+#
+# Echoes the path of the first file found.
+#
+# Returns 1 on failure to find any file.
+#
+###/doc
+
+function searchpaths:file_from {
+	local PATHS="$1"; shift || :
+	local FILE="$1"; shift || :
+
+	out:debug "Looking for file [$FILE] amongst [$PATHS]"
+
+	for path in $(echo "$PATHS"|tr ':' ' '); do
+		out:debug "Try path: $path"
+		local fpath="$path/$FILE"
+		if [[ -f "$fpath" ]]; then
+			echo "$fpath"
+			return 0
+		else
+			out:debug "No $fpath"
+		fi
+	done
+	return 1
+}
+
+includefile:reset_tracker() {
+	INCLUDEFILE_tracker=""
+}
+
+### includefile:process TARGET Usage:bbuild
+# Perform inclusions on stated target file
+#
+# Writes fully included result to stdout
+#
+# set INCLUDEFILE_token string to define the token which, at the begining of a line
+#  declares a list of files to include
+# set INCLUDEFILE_paths colon-delimited string to a search pth from which to find scripts to source
+###/doc
+includefile:process() {
+	local target
+	local workfile
+	local dumpfile
+	target="$1"; shift
+	workfile="$(mktemp ./._include-XXXX)"
+	dumpfile="$(mktemp ./._include-d-XXXX)"
+
+	trap "includefile:cleanup" SIGINT EXIT
+
+	: ${INCLUDEFILE_paths=./}
+	: ${INCLUDEFILE_token=@include}
+
+	includefile:reset_tracker
+	
+	cat "$target" > "$workfile"
+	
+	while includefile:_has_inclusion_line "$workfile"; do
+		includefile:_process_first_inclusion "$workfile" > "$dumpfile"
+		cat "$dumpfile" > "$workfile"
+	done
+
+	cat "$workfile"
+
+	#rm "$workfile" "$dumpfile"
+}
+
+### includefile:_process_first_inclusion TARGET Usage:internal
+# Find the first onclusion line, and include its targets
+#
+# returns 0 on successful inclusions
+# returns 1 on issues with inclusions
+###/doc
+includefile:_process_first_inclusion() {
+	local fd_target="$1"; shift
+	local target="$(mktemp)"
+	cat "$fd_target" > "$target"
+
+	local pos=$(includefile:_get_inclusion_line_pos "$target")
+	local inctokens=($(includefile:_get_inclusion_line_string "$target"))
+
+	head -n $((pos - 1)) "$target"
+	includefile:_cat_once "${inctokens[@]:1}" || return 1
+	tail -n +$((pos + 1)) "$target"
+
+	rm "$target"
+
+	return 0
+}
+
+includefile:_get_inclusion_line_pos() {
+	local targetfile="$1"; shift
+
+	grep -nP "^$INCLUDEFILE_token" "$targetfile" | head -n 1 | cut -d: -f1
+}
+
+includefile:_get_inclusion_line_string() {
+	local targetfile="$1"; shift
+
+	grep -P "^$INCLUDEFILE_token" "$targetfile" | head -n 1 
+}
+
+includefile:_has_inclusion_line() {
+	local targetfile="$1"; shift
+
+	grep -qP "^$INCLUDEFILE_token" "$targetfile"
+}
+
+includefile:_cat_once() {
+	local item
+	local fullpath
+	local b64t
+	for item in "$@"; do
+		[[ -n "$item" ]] || continue
+
+		fullpath="$(searchpaths:file_from "$INCLUDEFILE_paths" "$item")"
+		if [[ -z "$fullpath" ]]; then
+			return 1
+		fi
+		
+		out:debug "$item => $fullpath"
+		b64t=";$(echo "$fullpath" | base64 -w 0);"
+		if [[  "$INCLUDEFILE_tracker" =~ "$b64t" ]]; then
+			out:debug "\033[33;1m    Skip re-inclusion of [$item] (is in '$INCLUDEFILE_tracker')"
+			continue
+		fi
+
+		export INCLUDEFILE_tracker="$INCLUDEFILE_tracker $b64t"
+		cat "$fullpath"
+	done
+}
+
+includefile:cleanup() {
+	rm ./._include-*
+}
 #!/bin/bash
 
 ### bincheck:get COMMANDS ... Usage:bbuild
@@ -635,7 +651,7 @@ bincheck:has() {
 ###/doc
 
 bincheck:path() {
-	local binname="$1"; shift
+	local binname="$1"; shift || :
 
 	[[ "$binname" =~ / ]] && { 
 		# A relative path cannot be resolved, just check existence
@@ -654,88 +670,19 @@ bincheck:path() {
 	} || echo "$binname"
 }
 
-### Insert file contents Usage:bbuild
-# 
-# insertfile LINE DESTFILE SOURCEFILE
-#
-# Inserts the contents of SOURCEFILE into DESTFILE after line LINENUM
-#
-# When LINENUM is 0, inserts the contents before any of the lines of the file.
-#
-# Contrary to includefile, insertfil will always insert the file, even if it
-# has done so previously.
-#
-###/doc
 
-function insertfile {
-	local line="$1"
-	local destfile="$2"
-	local sourcefile="$3"
-
-	insertfile:checkargs "$@" || return 1
-
-	local lcount="$(egrep ^ -c "$destfile")"
-
-	if [[ "$1" -le 0 ]]; then
-		insertfile:sedinsert "$destfile" "$sourcefile"
-
-	elif [[ "$1" -gt $lcount ]]; then
-		out:debug "Insertion point $1 > $lcount"
-		breake "cat $sourcefile >> $destfile"
-		cat "$sourcefile" >> "$destfile"
-
-	else
-		insertfile:sedappend "$@"
-	fi
-
-	breake "File insertion over."
+setup_build_dir() {
+	mkdir -p "$BUILDOUTD" || out:fail "Cannot create the output directory !"
 }
 
-function insertfile:sedappend {
-	local line="$1"
-	local destfile="$2"
-	local sourcefile="$3"
-
-	breake sed "$line r $sourcefile" -i "$destfile"
-	sed "$line r $sourcefile" -i "$destfile"
-}
-
-function insertfile:sedinsert {
-	local destfile="$1"
-	local sourcefile="$2"
-
-	breake sed "1 {
-		h
-		r $sourcefile
-		g
-		N
-	}" -i "$destfile"
-	sed "1 {
-		h
-		r $sourcefile
-		g
-		N
-	}" -i "$destfile"
-}
-
-function insertfile:checkargs {
-	if [[ ! "$1" =~ ^[0-9]+$ ]]; then echo "Invalid line number"; return 1 ; fi
-	if [[ ! -f "$2" ]]; then echo "Not a file $2" >&2; return 1; fi
-	if [[ ! -f "$3" ]]; then echo "Not a file $3" >&2; return 1; fi
-}
-
-function setup_build_dir {
-	mkdir -p "$BUILDOUTD"
-}
-
-function load_project_environment {
+load_project_environment() {
 	if [[ -f  "$BBUILD_ENV_FILE" ]]; then
-		. "$BBUILD_ENV_FILE"
+		. "$BBUILD_ENV_FILE" || out:fail "Error during inclusion of environment file."
 	fi
 }
 
 # checktags { FILENAME | TAG SPEC }
-function checktags {
+checktags() {
 	if [[ -z "${1:-}" ]]; then return; fi
 
 	if [[ "${IGNORETAGS:-}" = unsafe ]]; then
@@ -768,42 +715,26 @@ function checktags {
 	done
 }
 
-function build_script {
+build_script() {
 	local infile="$1"; shift
 	local t_BBPATH="$(dirname "$infile"):$BBPATH"
 
 	local fname="$(basename "$infile")"
 	local tfile="$BUILDOUTD/$fname"
-	cp "$infile" "$tfile"
 
 	out:info "Building $infile to $tfile"
 
-	local intoken="#%include"
+	INCLUDEFILE_token="#%include"
+	INCLUDEFILE_paths="$t_BBPATH"
 
-	includefile:inittemp "$tfile"
+	includefile:process "$infile" > "$tfile" || out:fail "Inclusion on $tfile failed."
 
-	while grep -P "^$intoken" -q "$tfile" ; do
-		includefile:include "$tfile" "$intoken" "$t_BBPATH" || out:fail "Inclusion on $tfile failed."
-	done
-
+	do_shellcheck "$tfile"
 	checktags "$tfile"
-
 	chmod 755 "$tfile"
 }
 
-# Register callback function on-inclusion
-FILEINCLUDES_CALLBACK=file_inclusion_callback
-function file_inclusion_callback {
-	out:debug "calling back on [$1] into [$2]"
-	local targetfile="$(basename "$2")"
-
-	if ! (grep '#%bbflags' "$1"|grep 'nosc' -q); then
-		do_shellcheck "$1"
-	fi
-
-}
-
-function do_shellcheck {
+do_shellcheck() {
 	if [[ "$SHELLCHECK" = true ]]; then
 		if bincheck:has shellcheck ; then
 			shellcheck -s bash "$1"
@@ -814,11 +745,11 @@ function do_shellcheck {
 	fi
 }
 
-function arg_valueof {
+arg_valueof() {
 	echo "${1#*=}"
 }
 
-function parse_flag {
+parse_flag() {
 	case "$1" in
 	-C|--no-check)
 		SHELLCHECK=false
@@ -841,7 +772,7 @@ function parse_flag {
 	esac
 }
 
-function build_files_list {
+build_files_list() {
 	for arg in "$@"; do
 		if [[ -f "$arg" ]]; then
 			out:debug "File ${#prompt_file_list[@]} for processing: $arg"
@@ -856,7 +787,9 @@ function build_files_list {
 	done
 }
 
-function main {
+main() {
+	autohelp:check "$@"
+
 	BBUILD_ENV_FILE=./bbuild_env
 
 	# --- Defaults
@@ -889,4 +822,4 @@ function main {
 	done
 }
 
-main "$@"
+runmain bootstrap-bbuild5 main "$@"

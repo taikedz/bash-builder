@@ -23,21 +23,28 @@ The Bash Builder project aims to provide such a structure:
 Clone this repository, run the installation file.
 
 	git clone https://github.com/taikedz/bash-builder
-	bash-builder/install
+	cd bash-builder
+
+	# Verify only (no install)
+	./install.sh --verify
+
+	# Actually perform installation
+	./install.sh
 
 	# or,
-	#   sudo bash-builder/install
+	#   sudo ./install.sh
 
-Then open a new shell.
+Then open a new shell, or re-load your `~/.bashrc` file.
 
 You can now issue the `bbuild` command to build your scripts. See the `demo` folder for an example.
 
 If you installed as root, the commands are installed to `/usr/local/bin`, otherwise they are installed to `~/.local/bin`, and you may need to add that directory to your `$PATH`
 
-
 ## Examples
 
-You can see an example project in [examples/ssh-connection-manager](examples/ssh-connection-manager)
+Two primary examples are the `bbuild` and `bashdoc` programs themselves written to be compiled by bash builder.
+
+You can see an additional example project in [examples/ssh-connection-manager](examples/ssh-connection-manager)
 
 After installing bash-builder, you can `cd` to that directory and run `bbuild` to build the project.
 

@@ -38,6 +38,13 @@ environment_configuration() {
 	mkdir -p "$binsd"
 }
 
+run_verify() {
+	if [[ "$*" =~ --verify ]]; then
+		bash bash-libs/verify.sh
+		exit "$?"
+	fi
+}
+
 run_build() {
 	bash bash-libs/install.sh
 
@@ -57,6 +64,7 @@ main() {
 	cd "$(dirname "$0")"
 	set_paths
 	pull_libraries
+	run_verify "$@"
 	environment_configuration
 	run_build
 }

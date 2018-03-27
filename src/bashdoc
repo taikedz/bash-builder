@@ -6,16 +6,17 @@
 #
 # By default, prints the "bbuild" documentation sections.
 #
-# To print just the "api" sections, call
+# To print just the `api` sections, call
 #
 # 	bashdoc -api ...
 #
 ###/doc
 
-#%include autohelp.sh out.sh searchpaths.sh
+#%include autohelp.sh out.sh searchpaths.sh runmain.sh
 
-# Nothing specified, just list known modules
-if [[ -z "$*" ]]; then
+autohelp:check "$@"
+
+list_modules() {
 	out:info "Available modules: "
 
 	echo "$BBPATH"|sed 's/:/\n/g'|while read THEPATH; do
@@ -28,39 +29,51 @@ if [[ -z "$*" ]]; then
 		echo
 	done
 	echo
-	exit
-fi
+}
 
-# ====================================================================
-# Get the section, if specified.
+main() {
+	if [[ -z "$*" ]]; then
+		list_modules
+		exit 0
+	fi
 
-SECTION='bbuild'
+	# ====================================================================
+	# Get the section, if specified.
 
-if [[ "${1:0:1}" = "-" ]]; then
-	SECTION="${1:1}"
-	shift
-fi
+	SECTION='bbuild'
 
-out:info "Seeking section [$SECTION] on all files."
+	if [[ "${1:0:1}" = "-" ]]; then
+		SECTION="${1:1}"
+		shift
+	fi
 
-# =================
-# Process files
+	out:info "Seeking section [$SECTION] on all files."
 
-for file in "$@"; do
-	if [[ ! -f "$file" ]]; then
-		fulpath="$(searchpaths:file_from "$BBPATH" "$file")"
-		if [[ -n "$fulpath" ]]; then
-			file="$fulpath"
+	print_from "$@"
+}
+
+print_from() {
+	# =================
+	# Process files
+
+	for file in "$@"; do
+		if [[ ! -f "$file" ]]; then
+			fullpath="$(searchpaths:file_from "$BBPATH" "$file")"
+			if [[ -n "$fullpath" ]]; then
+				file="$fullpath"
+			fi
 		fi
-	fi
 
-	if [[ ! -f "$file" ]]; then
-		out:warn "No such file [$file]"
-		continue
-	fi
+		if [[ ! -f "$file" ]]; then
+			out:warn "No such file [$file]"
+			continue
+		fi
 
-	# Also print the tags for info
-	egrep '^#%bbtags' "$file"
+		# Also print the tags for info
+		egrep '^#%bbtags' "$file"
 
-	autohelp:print "$SECTION" "$file"
-done
+		autohelp:print "$SECTION" "$file"
+	done
+}
+
+runmain bashdoc main "$@"

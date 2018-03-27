@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION_NUM=5.0.0
+VERSION_NUM=5.0.1
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {
@@ -79,20 +79,20 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 #%include runmain.sh
 
-#%include autohelp.sh includefile.sh out.sh bincheck.sh insertfile.sh
+#%include autohelp.sh out.sh includefile2.sh bincheck.sh
 
-function setup_build_dir {
-	mkdir -p "$BUILDOUTD"
+setup_build_dir() {
+	mkdir -p "$BUILDOUTD" || out:fail "Cannot create the output directory !"
 }
 
-function load_project_environment {
+load_project_environment() {
 	if [[ -f  "$BBUILD_ENV_FILE" ]]; then
-		. "$BBUILD_ENV_FILE"
+		. "$BBUILD_ENV_FILE" || out:fail "Error during inclusion of environment file."
 	fi
 }
 
 # checktags { FILENAME | TAG SPEC }
-function checktags {
+checktags() {
 	if [[ -z "${1:-}" ]]; then return; fi
 
 	if [[ "${IGNORETAGS:-}" = unsafe ]]; then
@@ -125,42 +125,26 @@ function checktags {
 	done
 }
 
-function build_script {
+build_script() {
 	local infile="$1"; shift
 	local t_BBPATH="$(dirname "$infile"):$BBPATH"
 
 	local fname="$(basename "$infile")"
 	local tfile="$BUILDOUTD/$fname"
-	cp "$infile" "$tfile"
 
 	out:info "Building $infile to $tfile"
 
-	local intoken="#%include"
+	INCLUDEFILE_token="#%include"
+	INCLUDEFILE_paths="$t_BBPATH"
 
-	includefile:inittemp "$tfile"
+	includefile:process "$infile" > "$tfile" || out:fail "Inclusion on $tfile failed."
 
-	while grep -P "^$intoken" -q "$tfile" ; do
-		includefile:include "$tfile" "$intoken" "$t_BBPATH" || out:fail "Inclusion on $tfile failed."
-	done
-
+	do_shellcheck "$tfile"
 	checktags "$tfile"
-
 	chmod 755 "$tfile"
 }
 
-# Register callback function on-inclusion
-FILEINCLUDES_CALLBACK=file_inclusion_callback
-function file_inclusion_callback {
-	out:debug "calling back on [$1] into [$2]"
-	local targetfile="$(basename "$2")"
-
-	if ! (grep '#%bbflags' "$1"|grep 'nosc' -q); then
-		do_shellcheck "$1"
-	fi
-
-}
-
-function do_shellcheck {
+do_shellcheck() {
 	if [[ "$SHELLCHECK" = true ]]; then
 		if bincheck:has shellcheck ; then
 			shellcheck -s bash "$1"
@@ -171,11 +155,11 @@ function do_shellcheck {
 	fi
 }
 
-function arg_valueof {
+arg_valueof() {
 	echo "${1#*=}"
 }
 
-function parse_flag {
+parse_flag() {
 	case "$1" in
 	-C|--no-check)
 		SHELLCHECK=false
@@ -198,7 +182,7 @@ function parse_flag {
 	esac
 }
 
-function build_files_list {
+build_files_list() {
 	for arg in "$@"; do
 		if [[ -f "$arg" ]]; then
 			out:debug "File ${#prompt_file_list[@]} for processing: $arg"
@@ -213,7 +197,9 @@ function build_files_list {
 	done
 }
 
-function main {
+main() {
+	autohelp:check "$@"
+
 	BBUILD_ENV_FILE=./bbuild_env
 
 	# --- Defaults
