@@ -69,6 +69,8 @@ print_from() {
 			continue
 		fi
 
+		egrep '^##bash-libs:' "$file"
+
 		# Also print the tags for info
 		egrep '^#%bbtags' "$file"
 

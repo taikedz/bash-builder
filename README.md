@@ -42,7 +42,7 @@ If you installed as root, the commands are installed to `/usr/local/bin`, otherw
 
 ## Examples
 
-Two primary examples are the `bbuild` and `bashdoc` programs themselves written to be compiled by bash builder.
+Two primary examples are the [`bbuild`](src/bbuild) and [`bashdoc`](src/bashdoc) programs themselves written to be compiled by bash builder.
 
 You can see an additional example project in [examples/ssh-connection-manager](examples/ssh-connection-manager)
 
