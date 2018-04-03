@@ -2,13 +2,13 @@
 
 (C) 2017 Tai Kedzierski, provided under GNU General Public License v3.0.
 
-A toolset for managing bash snippets/libraries, and managing in-line documentation.
+A toolset for managing bash snippets/libraries, managing in-line documentation, and bundling assets into single executables.
 
 For more on writing cleaner bash scripts, see the [clean writing notes](writing_clean_bash.md).
 
 ## What is this?
 
-Bash Builder is a tool to help writing bash scripts as multiple files, but compiling and distributing as a single file. Note that this is specifically for GNU bash - strict POSIX `sh` usage is not supported.
+Bash Builder is a tool to help writing bash scripts as multiple files, but combining and distributing as a single file. Note that this is specifically intended for use with GNU bash - strict POSIX `sh` usage is not supported.
 
 Bash, as a language, lacks a usable mechanism to allow developing separate, loosely-related components in separate files, and building libraries of such files for re-use.
 
@@ -17,6 +17,7 @@ The Bash Builder project aims to provide such a structure:
 * combiner for assembling bash scripts using `#%include` statements
 * customizable search paths for inclusion of files
 * a default library of useful functions to make developing in bash clearer and cleaner
+* a utility to collect and bundle assets and external scripts into a single executable
 
 ## Installing
 
@@ -40,23 +41,11 @@ You can now issue the `bbuild` command to build your scripts. See the `demo` fol
 
 If you installed as root, the commands are installed to `/usr/local/bin`, otherwise they are installed to `~/.local/bin`, and you may need to add that directory to your `$PATH`
 
-## Examples
-
-Two primary examples are the [`bbuild`](src/bbuild) and [`bashdoc`](src/bashdoc) programs themselves written to be compiled by bash builder.
-
-You can see an additional example project in [examples/ssh-connection-manager](examples/ssh-connection-manager)
-
-After installing bash-builder, you can `cd` to that directory and run `bbuild` to build the project.
-
-	cd examples/ssh-connection-manager
-	bbuild
-	bin/connect --help
-
 ## Features
 
 ### `bbuild`
 
-The main compiler script that processes the scripts, each into a single executable file.
+The main combiner script that processes the scripts, each into a single executable file.
 
 	bbuild FILES ...
 
@@ -96,11 +85,11 @@ This prints the documentation for the `out.sh` script.
 
 ### Default library
 
-The default library is hosted in a separate repository at https://github.com/taikedz/bash-libs ; it is cloned locally during install.
+The default library is hosted in a separate repository at [https://github.com/taikedz/bash-libs](https://github.com/taikedz/bash-libs) ; it is cloned locally during install.
 
 If you installed as root, the default library from `bash-libs/libs/` is installed to `/usr/local/lib/bbuild`, otherwise they are installed to `~/.local/lib/bbuild`
 
-You can configure `$BBPATH` in your `.bashrc` file to point to a series of custom locations for scripts, each path is separated by a colon `:`. By default, BBPATH is automatically set to `~/.local/lib/bbuild:/usr/local/lib/bbuild`.
+You can configure `$BBPATH` in your `.bashrc` file to point to a series of custom locations for scripts, each path is separated by a colon `:`. By default, `BBPATH` is automatically set to `~/.local/lib/bbuild:/usr/local/lib/bbuild`.
 
 A typical use case would be to add your library directory from the current working directory:
 
@@ -144,14 +133,35 @@ Autohelp allows you to use documentation comments to produce help.
 
 	#%include autohelp.sh
 
+	autohelp:check "$@" # Detect --help string, print help, and exit
+
 When your script subsequently is run with the `--help` option, autohelp will *always* kick in, printing the help contents, and exiting.
 
 You can also call the help print routine from within your script using the `autohelp:print` command (does not cause the script to exit).
 
 ### TarSH - Self Extracting and Running TAR files
 
-A utility for combining various assets into a single self-extracting and running tar file.
+A utility for collecting various assets into a single self-extracting and running tar file.
 
 Using this, full collections of scripts and binary assets can be deployed in a single runnable file.
 
-See [the `tarsh` documentation](src/tarsh/README.md)
+See [the `tarsh` documentation](src/tarsh/README.md) and the [myip](examples/myip) example
+
+## Examples
+
+Two primary examples are the [`bbuild`](src/bbuild) and [`bashdoc`](src/bashdoc) programs themselves written to be compiled by bash builder !
+
+You can see an additional example project in [examples/ssh-connection-manager](examples/ssh-connection-manager)
+
+After installing bash-builder, you can `cd` to that directory and run `bbuild` to build the project.
+
+	cd examples/ssh-connection-manager
+	bbuild
+	bin/connect --help
+
+You can also see a simple example of the use of multiple scripting languages combined into one through TarSH in the [examples/myip](examples/myip) folder
+
+	cd examples/myip
+	./build.sh
+	./myip.tgz.sh
+

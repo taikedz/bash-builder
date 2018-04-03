@@ -40,7 +40,7 @@ environment_configuration() {
 
 run_verify() {
 	if [[ "$*" =~ --verify ]]; then
-		bash bash-libs/verify.sh
+		BBEXEC="$PWD/bootstrap/bootstrap-bbuild5" bash-libs/verify.sh
 		exit "$?"
 	fi
 }
