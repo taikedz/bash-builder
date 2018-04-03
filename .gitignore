@@ -1,6 +1,5 @@
 .*.swp
 *~
-bin/
 scratch/
 release-cand/
 build-outd/
