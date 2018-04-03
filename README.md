@@ -148,3 +148,10 @@ When your script subsequently is run with the `--help` option, autohelp will *al
 
 You can also call the help print routine from within your script using the `autohelp:print` command (does not cause the script to exit).
 
+### TarSH - Self Extracting and Running TAR files
+
+A utility for combining various assets into a single self-extracting and running tar file.
+
+Using this, full collections of scripts and binary assets can be deployed in a single runnable file.
+
+See [the `tarsh` documentation](src/tarsh/README.md)

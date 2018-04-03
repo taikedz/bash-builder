@@ -1,0 +1,53 @@
+#!/bin/bash
+
+### Tar Shell Combiner Usage:help
+#
+# Combine shell scripts and assets into a tar file
+#
+###/doc
+
+#%include autohelp.sh out.sh searchpaths.sh
+
+tarshc:locate_header() {
+	TARSHC_header="$(searchpaths:file_from "$BBPATH" tarheader.sh)" || :
+
+	[[ -n "$TARSHC_header" ]] || out:fail "Could not locate an unpack script in or amongst [$BBPATH]"
+}
+
+tarshc:combine() {
+	tarshc:locate_header
+
+	local plain_archive="$TARSHC_name.tar.gz"
+	local script_archive="$TARSHC_name.tgz.sh"
+
+	tar czf "$plain_archive" "$@"  # "${assets[@]}" # $assets from manifest
+
+	tar tzf "$plain_archive" | grep -q "^bin/main.sh" || {
+		out:warn "No bin/main.sh detected"
+		sleep 1
+	}
+
+	# This is intended for conflict resolution at unpack time, not content validation
+	local md5sum="$(md5sum "$plain_archive"|cut -d' ' -f1)"
+	md5sum="${md5sum:0:8}"
+
+	# For quick-reference; day date is enough
+	local datef="$(date +%F)"
+
+	cat <(sed "s/%TARSH_ID%/$datef-$md5sum/" "$TARSHC_header") "$plain_archive" > "$script_archive"
+
+	rm "$plain_archive"
+	chmod 755 "$script_archive"
+
+	out:info "Built [$script_archive]"
+}
+
+main() {
+	: ${TARSHC_name=$(basename "$PWD")}
+
+	autohelp:check "$@"
+
+	tarshc:combine "$@"
+}
+
+main "$@"

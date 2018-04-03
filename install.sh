@@ -48,12 +48,12 @@ run_verify() {
 run_build() {
 	bash bash-libs/install.sh
 
-	BUILDFILES=(src/bashdoc src/bbuild)
+	BUILDFILES=(src/bashdoc src/bbuild src/tarsh/tarshc)
 
 	BBPATH="$libsdir" bash bootstrap/bootstrap-bbuild5 "${BUILDFILES[@]}" "$@" || exit 1
-	cp ./build-outd/bbuild ./build-outd/bashdoc "$binsd/"
+	cp ./build-outd/bbuild ./build-outd/bashdoc ./build-outd/tarshc "$binsd/"
 
-	echo -e "\033[32;1mSuccessfully installed 'bbuild' to [$binsd]\033[0m"
+	echo -e "\033[32;1mSuccessfully installed 'bbuild', 'bashdoc', 'tarshc' to [$binsd]\033[0m"
 
 	if ! which shellcheck 2>&1 >/dev/null ; then
 		echo -e '\n\tConsider installing "shellcheck"\n'
