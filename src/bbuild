@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION_NUM=5.0.1
+VERSION_NUM=5.1.1
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {
@@ -137,7 +137,7 @@ build_script() {
 	INCLUDEFILE_token="#%include"
 	INCLUDEFILE_paths="$t_BBPATH"
 
-	includefile:process "$infile" > "$tfile" || out:fail "Inclusion on $tfile failed."
+	includefile:process "$infile" > "$tfile" || out:fail "Inclusion on $tfile failed : [${INCLUDEFILE_failed:-}]"
 
 	do_shellcheck "$tfile"
 	checktags "$tfile"
