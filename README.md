@@ -4,7 +4,7 @@
 
 A toolset for managing bash snippets/libraries, managing in-line documentation, and bundling assets into single executables.
 
-For more on writing cleaner bash scripts, see the [clean writing notes](writing_clean_bash.md).
+For more on writing cleaner bash scripts, see the [clean writing notes](docs/writing_clean_bash.md).
 
 ## What is this?
 
@@ -145,7 +145,7 @@ A utility for collecting various assets into a single self-extracting and runnin
 
 Using this, full collections of scripts and binary assets can be deployed in a single runnable file.
 
-See [the `tarsh` documentation](src/tarsh/README.md) and the [myip](examples/myip) example
+See [the `tarsh` documentation](docs/tarsh.md) and the [myip](examples/myip) example.
 
 ## Examples
 

@@ -48,7 +48,7 @@ run_verify() {
 run_build() {
 	bash bash-libs/install.sh
 
-	BUILDFILES=(src/bashdoc src/bbuild src/tarsh/tarshc)
+	BUILDFILES=(src/bashdoc src/bbuild src/tarshc)
 
 	BBPATH="$libsdir" bash bootstrap/bootstrap-bbuild5 "${BUILDFILES[@]}" "$@" || exit 1
 	cp ./build-outd/bbuild ./build-outd/bashdoc ./build-outd/tarshc "$binsd/"
