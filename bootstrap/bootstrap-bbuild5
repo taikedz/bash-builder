@@ -39,12 +39,12 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 # Environment
 # -----------
 #
-# You can set environment variables in your .bashrc file, or in a local `./bbuild_env` file, which is sourced once before commencing build.
+# You can set environment variables in your .bashrc file, or in a local `./bbuildrc` file, which is sourced once before commencing build.
 #
 # The order of precedence for options and environment variables is:
 #
 # * command line arguments
-# * `bbuild_env` settings
+# * `bbuildrc` settings
 # * local environment settings
 # * `.bashrc` settings
 #
@@ -790,7 +790,7 @@ build_files_list() {
 main() {
 	autohelp:check "$@"
 
-	BBUILD_ENV_FILE=./bbuild_env
+	BBUILD_ENV_FILE=./bbuildrc
 
 	# --- Defaults
 	: ${BBPATH=./}

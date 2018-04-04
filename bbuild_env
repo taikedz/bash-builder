@@ -1,3 +1,0 @@
-BBFILES=(src/bbuild src/bashdoc)
-SHELLCHECK=false
-BBPATH=bash-libs/libs/:src/:./
