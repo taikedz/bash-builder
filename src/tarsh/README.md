@@ -60,5 +60,21 @@ The following is an example of
 
 	./my-demo.tgz.sh
 
+## Converting a Virtual Env into a TarSH runnable
+
+You can use TarSH for other things too - for example, bundling a python virtualenv and application !
+
+1. Create Virtual Env in host
+2. Activate Virtual Env
+3. Install requirements
+4. Edit `bin/activate` and change `VIRTUAL_ENV` to point to $TARWD
+5. Edit `bin/pip3` to use shebang `/usr/bin/env python` (or `python3` as needed)
+6. Copy your application to the python environment
+7. Create a `bin/main.sh` script that sources the bash activation script
+8. Call your application's main script, prefixing correctly with the `$TARWD` path
+9. Make `main.sh` executable
+10. Still in the virtual env, run `tarshc *`
+
+You now have a runnable application you can move around, with an embedded virtualenv !
 
 
