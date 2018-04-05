@@ -152,6 +152,9 @@ process_action() {
 	/key)
 		ssh_copykey "$@"
 		;;
+	/edit)
+		edit_servers
+		;;
 	*)
 		out:fail "Unknown action $action"
 		;;

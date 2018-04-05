@@ -1,3 +1,7 @@
+edit_servers() {
+	: ${EDITOR=nano}
+	"$EDITOR" "$SERVERS_FILE"
+}
 
 add_server() {
 	[[ -n "$*" ]] || out:fail "Please specify a server to add"
