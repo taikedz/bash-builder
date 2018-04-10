@@ -17,3 +17,13 @@ To run it:
 The `build.sh` script builds the bash asset in `src/` into `bin`, then runs `tarshc` to bundle it.
 
 This produces a directly runnable bundle.
+
+## Options
+
+Friendly message with your IP:
+
+	./myip.tgz.sh
+
+Batch mode: just the IP, for programmatic use
+
+	./myip.tgz.sh -b
