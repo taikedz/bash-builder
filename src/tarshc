@@ -14,40 +14,47 @@ tarshc:locate_header() {
 	[[ -n "$TARSHC_header" ]] || out:fail "Could not locate an unpack script in or amongst [$BBPATH]"
 }
 
-tarshc:combine() {
-	tarshc:locate_header
+tarshc:derive_names() {
+	: ${TARSHC_name=$(basename "$PWD")}
 
-	local plain_archive="$TARSHC_name.tar.gz"
-	local script_archive="$TARSHC_name.tgz.sh"
+	TARSHC_plain_archive="_$TARSHC_name.tar.gz"
+	TARSH_script_archive="$TARSHC_name.tgz.sh"
+}
 
-	tar czf "$plain_archive" "$@"  # "${assets[@]}" # $assets from manifest
+tarshc:pack() {
+	tar czf "$TARSHC_plain_archive" "$@"
 
-	tar tzf "$plain_archive" | grep -q "^bin/main.sh" || {
-		out:warn "No bin/main.sh detected"
-		sleep 1
+	tar tzf "$TARSHC_plain_archive" | grep -q "^bin/main.sh" || {
+		out:fail "No bin/main.sh detected. [$TARSHC_plain_archive] --> [$TARSH_script_archive] failed."
 	}
+}
+
+tarshc:combine() {
+	local md5sum datef
 
 	# This is intended for conflict resolution at unpack time, not content validation
-	local md5sum="$(md5sum "$plain_archive"|cut -d' ' -f1)"
+	md5sum="$(md5sum "$TARSHC_plain_archive"|cut -d' ' -f1)"
 	md5sum="${md5sum:0:8}"
 
 	# For quick-reference; day date is enough
-	local datef="$(date +%F)"
+	datef="$(date +%F)"
 
-	cat <(sed "s/%TARSH_ID%/$datef-$md5sum/" "$TARSHC_header") "$plain_archive" > "$script_archive"
+	cat <(sed "s/%TARSH_ID%/$datef-$md5sum/" "$TARSHC_header") "$TARSHC_plain_archive" > "$TARSH_script_archive"
 
-	rm "$plain_archive"
-	chmod 755 "$script_archive"
-
-	out:info "Built [$script_archive]"
+	rm "$TARSHC_plain_archive"
+	chmod 755 "$TARSH_script_archive"
 }
 
 main() {
-	: ${TARSHC_name=$(basename "$PWD")}
-
 	autohelp:check "$@"
 
+	tarshc:locate_header
+	tarshc:derive_names
+
+	tarshc:pack "$@"
 	tarshc:combine "$@"
+
+	out:info "Built [$TARSH_script_archive]"
 }
 
 main "$@"
