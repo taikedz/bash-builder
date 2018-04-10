@@ -3,12 +3,19 @@
 set -euo pipefail
 
 pull_libraries() {
+	echo "Updating libraries ..."
 	if [[ ! -d "$libsdir" ]] && [[ ! -L "$libsdir" ]]; then
 		git clone "$libsurl" || {
 			echo "Could not clone default libraries repo [$libsurl]"
 			exit 1
 		}
+	else
+		(cd "$libsdir" && git pull ) || {
+			echo "Could not update the default libraries in '$libsdir' !"
+			exit 1
+		}
 	fi
+	echo # just separate this operation
 }
 
 set_paths() {
