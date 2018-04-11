@@ -19,5 +19,5 @@ delete_server() {
 
 	local target="$1"; shift
 	
-	sed -r "/%\s+$target/ d" -i "$SERVERS_FILE"
+	sed -r "/%\s+$target(\s+|$)/ d" -i "$SERVERS_FILE"
 }

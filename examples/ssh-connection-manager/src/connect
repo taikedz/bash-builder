@@ -42,36 +42,48 @@ set -euo pipefail
 #
 # 	SERVERSPEC is a hostname, optionally with a username and/or port:
 #
-# 		host.example.com
+# 		connect /add host.example.com
 #
-# 		host.example.com:8022
+# 		connect /add host.example.com:8022
 #
-# 		user@host
+# 		connect /add user@host
 #
-# 		user@host:922
+# 		connect /add user@host:922
+#
+# 	You can include commentary in the SERVERSPEC by simply adding extra words after the server string itself
+#
+# 		connect /add user@resource.host Also known as res1
+# 		connect /add user@resource2.host Also known as res2
+#
+# 	Text in commentary is also checked when selecting servers - for example, the above allows you to do
+#
+# 		connect res1
 #
 # /del SERVERSPEC
 #
-# 	Remove the specified server from the list. SERVERSPEC is used to match the appropriate host definition.
-# 	If several hosts are found, all are removed.
+# 	Remove the specified server from the list. SERVERSPEC must match user@host:port combination literally
+#
+# 	Commentary is not matched against.
 #
 # /push DESTINATION FILES ...
 #
 # 	Use scp to copy files to the specified server, into the specified destination:
 #
-#	 	connect server1 /push ./www myhtml/file1.html
+#	 	connect /push ./www myhtml/file1.html
 #
 # /pull DESTINATION REMOTEFILES ...
 #
 # 	Use scp to copy files from the specified server, into the local destination:
 #
-# 		connect server1 /pull ./localdir remote_file1 remote_file2
+# 		connect /pull ./localdir remote_file1 remote_file2
 #
 # /run COMMAND ...
 #
 # 	Run a command (with arguments) on the chosen servers.
 #
 # 	Multiple servers can be chosen.
+#
+# 		choose=1,3 connect /run ls
 #
 # /key
 #

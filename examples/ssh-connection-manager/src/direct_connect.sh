@@ -24,8 +24,8 @@ ssh_run() {
 }
 
 copyover_files() {
-	# Assert that there are at least 2 arguments, or fail
-	[[ -n "${2:-}" ]] || out:fail "Usage: copyto DEST FILES ..."
+	# Assert that there are at least 3 arguments, or fail
+	[[ -n "${3:-}" ]] || out:fail "Usage: (/push|/pull) DEST FILES ..."
 
 	local action="$1"; shift
 	local chosen="$(choose_server)"
