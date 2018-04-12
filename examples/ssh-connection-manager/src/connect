@@ -13,9 +13,9 @@ set -euo pipefail
 # Keep tabs on your SSH connections, run commands on the same group of ssh-enabled hosts.
 #
 # USAGE
-#	
-#	connect [CHOICESPEC] /run COMMAND ...
-#	connect [CHOICESPEC] /key
+#    
+#    connect [CHOICESPEC] /run COMMAND ...
+#    connect [CHOICESPEC] /key
 # 	connect [CHOICESPEC] { /push REMOTEDIR LOCALFILES ... | /pull LOCALDIR REMOTFILES ... | /run COMMAND ...}
 # 	connect { /add SERVERSPEC | /del SERVERSPEC }
 #
@@ -24,15 +24,15 @@ set -euo pipefail
 # Choose a server by typing its index number, or a string of characters that match a single server from the list.
 #
 # Where CHOICESPEC can be used, specify the choice to pre-populate. Multiple-choices can only be used on `scp` and `run` commands.
-#	
-#	connect 3
-#		will choose host 3
+#    
+#    connect 3
+#        will choose host 3
 #
 # 	connect 5,7
 # 		will apply the run or scp command to hosts 5, 6 and 7
-#	
-#	connect test
-#		will apply the run or scp command to all hosts with "test" in the server spec name
+#    
+#    connect test
+#        will apply the run or scp command to all hosts with "test" in the server spec name
 #
 # When specified with actions:
 #
@@ -69,7 +69,7 @@ set -euo pipefail
 #
 # 	Use scp to copy files to the specified server, into the specified destination:
 #
-#	 	connect /push ./www myhtml/file1.html
+#     	connect /push ./www myhtml/file1.html
 #
 # /pull DESTINATION REMOTEFILES ...
 #
@@ -122,60 +122,60 @@ set -euo pipefail
 #  except for configuration variables
 
 main() {
-	if [[ -n "$*" ]]; then
-		out:debug "Processing actions ..."
-		process_action "$@"
-	else
-		out:debug "Just connect"
-		ssh_connect
-	fi
+    if [[ -n "$*" ]]; then
+        out:debug "Processing actions ..."
+        process_action "$@"
+    else
+        out:debug "Just connect"
+        ssh_connect
+    fi
 }
 
 process_action() {
-	local action="$1"; shift
-	out:debug "Action: $action"
+    local action="$1"; shift
+    out:debug "Action: $action"
 
-	if [[ ! "$action" =~ ^/ ]]; then
-		out:debug "Action is choice"
-		choose="$action"
-		action="${1:-}" ; shift || :
-	fi
+    if [[ ! "$action" =~ ^/ ]]; then
+        out:debug "Action is choice"
+        choose="$action"
+        action="${1:-}" ; shift || :
+    fi
 
-	if [[ -z "$action" ]]; then
-		out:debug "Simple connection"
-		ssh_connect ; exit $?
-	fi
+    if [[ -z "$action" ]]; then
+        out:debug "Simple connection"
+        ssh_connect ; exit $?
+    fi
 
-	out:debug "Action is now $action"
+    out:debug "Action is now $action"
 
-	case "$action" in
-	/add)
-		add_server "$@"
-		;;
-	/del)
-		delete_server "$@"
-		;;
-	/push|/pull)
-		copyover_files "$action" "$@"
-		;;
-	/run)
-		ssh_run "$@"
-		;;
-	/key)
-		ssh_copykey "$@"
-		;;
-	/edit)
-		edit_servers
-		;;
-	*)
-		out:fail "Unknown action $action"
-		;;
-	esac
+    case "$action" in
+    /add)
+        add_server "$@"
+        ;;
+    /del)
+        delete_server "$@"
+        ;;
+    /push|/pull)
+        copyover_files "$action" "$@"
+        ;;
+    /run)
+        ssh_run "$@"
+        ;;
+    /key)
+        ssh_copykey "$@"
+        ;;
+    /edit)
+        edit_servers
+        ;;
+    *)
+        out:fail "Unknown action $action"
+        ;;
+    esac
 }
 
 init_serverfile() {
-	mkdir -p "$(dirname "$SERVERS_FILE")"
-	touch "$SERVERS_FILE"
+    mkdir -p "$(dirname "$SERVERS_FILE")"
+    touch "$SERVERS_FILE"
 }
 
 runmain connect main "$@"

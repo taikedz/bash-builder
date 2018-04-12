@@ -17,65 +17,65 @@
 autohelp:check "$@"
 
 list_modules() {
-	out:info "Available modules: "
+    out:info "Available modules: "
 
-	echo "$BBPATH"|sed 's/:/\n/g'|while read THEPATH; do
-		out:warn "Checking $THEPATH"
-		ls "$THEPATH"|while read f; do
-			if [[ -f "$THEPATH/$f" ]]; then
-				echo -n "$f "
-			fi
-		done
-		echo
-	done
-	echo
+    echo "$BBPATH"|sed 's/:/\n/g'|while read THEPATH; do
+        out:warn "Checking $THEPATH"
+        ls "$THEPATH"|while read f; do
+            if [[ -f "$THEPATH/$f" ]]; then
+                echo -n "$f "
+            fi
+        done
+        echo
+    done
+    echo
 }
 
 main() {
-	if [[ -z "$*" ]]; then
-		list_modules
-		exit 0
-	fi
+    if [[ -z "$*" ]]; then
+        list_modules
+        exit 0
+    fi
 
-	# ====================================================================
-	# Get the section, if specified.
+    # ====================================================================
+    # Get the section, if specified.
 
-	SECTION='bbuild'
+    SECTION='bbuild'
 
-	if [[ "${1:0:1}" = "-" ]]; then
-		SECTION="${1:1}"
-		shift
-	fi
+    if [[ "${1:0:1}" = "-" ]]; then
+        SECTION="${1:1}"
+        shift
+    fi
 
-	out:info "Seeking section [$SECTION] on all files."
+    out:info "Seeking section [$SECTION] on all files."
 
-	print_from "$@"
+    print_from "$@"
 }
 
 print_from() {
-	# =================
-	# Process files
+    # =================
+    # Process files
 
-	for file in "$@"; do
-		if [[ ! -f "$file" ]]; then
-			fullpath="$(searchpaths:file_from "$BBPATH" "$file")"
-			if [[ -n "$fullpath" ]]; then
-				file="$fullpath"
-			fi
-		fi
+    for file in "$@"; do
+        if [[ ! -f "$file" ]]; then
+            fullpath="$(searchpaths:file_from "$BBPATH" "$file")"
+            if [[ -n "$fullpath" ]]; then
+                file="$fullpath"
+            fi
+        fi
 
-		if [[ ! -f "$file" ]]; then
-			out:warn "No such file [$file]"
-			continue
-		fi
+        if [[ ! -f "$file" ]]; then
+            out:warn "No such file [$file]"
+            continue
+        fi
 
-		egrep '^##bash-libs:' "$file"
+        egrep '^##bash-libs:' "$file"
 
-		# Also print the tags for info
-		egrep '^#%bbtags' "$file"
+        # Also print the tags for info
+        egrep '^#%bbtags' "$file"
 
-		autohelp:print "$SECTION" "$file"
-	done
+        autohelp:print "$SECTION" "$file"
+    done
 }
 
 runmain bashdoc main "$@"

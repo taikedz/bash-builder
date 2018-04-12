@@ -4,9 +4,9 @@ VERSION_NUM=5.1.1
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {
-	echo "$VERSION_NUM"
-	echo "$VERSION_NOTE"
-	exit
+    echo "$VERSION_NUM"
+    echo "$VERSION_NOTE"
+    exit
 }
 
 ### Bash Builder 5 Usage:help
@@ -62,7 +62,7 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 #
 # BUILDOUTD -- directory in which to place build results
 #
-#	BUILDOUTD=./build-outd
+#    BUILDOUTD=./build-outd
 #
 #
 # IGNORETAGS -- if set to "unsafe", ignores tags and their effects.
@@ -82,158 +82,158 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 #%include autohelp.sh out.sh includefile2.sh bincheck.sh
 
 setup_build_dir() {
-	mkdir -p "$BUILDOUTD" || out:fail "Cannot create the output directory !"
+    mkdir -p "$BUILDOUTD" || out:fail "Cannot create the output directory !"
 }
 
 load_project_environment() {
-	if [[ -f  "$BBUILD_ENV_FILE" ]]; then
-		. "$BBUILD_ENV_FILE" || out:fail "Error during inclusion of environment file."
-	fi
+    if [[ -f  "$BBUILD_ENV_FILE" ]]; then
+        . "$BBUILD_ENV_FILE" || out:fail "Error during inclusion of environment file."
+    fi
 }
 
 # checktags { FILENAME | TAG SPEC }
 checktags() {
-	if [[ -z "${1:-}" ]]; then return; fi
+    if [[ -z "${1:-}" ]]; then return; fi
 
-	if [[ "${IGNORETAGS:-}" = unsafe ]]; then
-		return
-	fi
+    if [[ "${IGNORETAGS:-}" = unsafe ]]; then
+        return
+    fi
 
-	local tagsname="#%bbtags"
-	if [[ "$1" != "$tagsname" ]]; then
-		checktags $(grep "^$tagsname" "$1")
-		return
-	fi
+    local tagsname="#%bbtags"
+    if [[ "$1" != "$tagsname" ]]; then
+        checktags $(grep "^$tagsname" "$1")
+        return
+    fi
 
-	shift; # first arg is the bbtag
-	
-	for tag in "$@"; do
-		case "$tag" in
-			i:*)
-				out:info "TAGS: $tag"
-				;;
-			w:*)
-				out:warn "TAGS: $tag"
-				;;
-			e:*)
-				out:fail "TAGS: $tag"
-				;;
-			*)	
-				out:debug "TAGS: $tag"
-				;;
-		esac
-	done
+    shift; # first arg is the bbtag
+    
+    for tag in "$@"; do
+        case "$tag" in
+            i:*)
+                out:info "TAGS: $tag"
+                ;;
+            w:*)
+                out:warn "TAGS: $tag"
+                ;;
+            e:*)
+                out:fail "TAGS: $tag"
+                ;;
+            *)	
+                out:debug "TAGS: $tag"
+                ;;
+        esac
+    done
 }
 
 build_script() {
-	local infile="$1"; shift
-	local t_BBPATH="$(dirname "$infile"):$BBPATH"
+    local infile="$1"; shift
+    local t_BBPATH="$(dirname "$infile"):$BBPATH"
 
-	local fname="$(basename "$infile")"
-	local tfile="$BUILDOUTD/$fname"
+    local fname="$(basename "$infile")"
+    local tfile="$BUILDOUTD/$fname"
 
-	out:info "Building $infile to $tfile"
+    out:info "Building $infile to $tfile"
 
-	INCLUDEFILE_token="#%include"
-	INCLUDEFILE_paths="$t_BBPATH"
+    INCLUDEFILE_token="#%include"
+    INCLUDEFILE_paths="$t_BBPATH"
 
-	includefile:process "$infile" > "$tfile" || out:fail "Inclusion on $tfile failed : [${INCLUDEFILE_failed:-}]"
+    includefile:process "$infile" > "$tfile" || out:fail "Inclusion on $tfile failed : [${INCLUDEFILE_failed:-}]"
 
-	do_shellcheck "$tfile"
-	checktags "$tfile"
-	chmod 755 "$tfile"
+    do_shellcheck "$tfile"
+    checktags "$tfile"
+    chmod 755 "$tfile"
 }
 
 do_shellcheck() {
-	if [[ "$SHELLCHECK" = true ]]; then
-		if bincheck:has shellcheck ; then
-			shellcheck -s bash "$1"
-		else
-			out:warn "You need to install shellcheck to perform syntax check"
-			SHELLCHECK=false
-		fi
-	fi
+    if [[ "$SHELLCHECK" = true ]]; then
+        if bincheck:has shellcheck ; then
+            shellcheck -s bash "$1"
+        else
+            out:warn "You need to install shellcheck to perform syntax check"
+            SHELLCHECK=false
+        fi
+    fi
 }
 
 arg_valueof() {
-	echo "${1#*=}"
+    echo "${1#*=}"
 }
 
 parse_flag() {
-	case "$1" in
-	-C|--no-check)
-		SHELLCHECK=false
-		;;
-	-c|--check)
-		SHELLCHECK=true
-		;;
-	--out=*)
-		BUILDOUTD="$(arg_valueof "$1")"
-		;;
-	--ignore-tags)
-		IGNORETAGS=unsafe
-		;;
-	--release)
-		DOSETRELEASE=true
-		;;
-	*)
-		out:fail "Unknown argument $1"
-		;;
-	esac
+    case "$1" in
+    -C|--no-check)
+        SHELLCHECK=false
+        ;;
+    -c|--check)
+        SHELLCHECK=true
+        ;;
+    --out=*)
+        BUILDOUTD="$(arg_valueof "$1")"
+        ;;
+    --ignore-tags)
+        IGNORETAGS=unsafe
+        ;;
+    --release)
+        DOSETRELEASE=true
+        ;;
+    *)
+        out:fail "Unknown argument $1"
+        ;;
+    esac
 }
 
 build_files_list() {
-	for arg in "$@"; do
-		if [[ -f "$arg" ]]; then
-			out:debug "File ${#prompt_file_list[@]} for processing: $arg"
-			prompt_file_list[${#prompt_file_list[@]}]="$arg"
+    for arg in "$@"; do
+        if [[ -f "$arg" ]]; then
+            out:debug "File ${#prompt_file_list[@]} for processing: $arg"
+            prompt_file_list[${#prompt_file_list[@]}]="$arg"
 
-		elif [[ "$arg" =~ ^- ]]; then
-			parse_flag "$arg"
+        elif [[ "$arg" =~ ^- ]]; then
+            parse_flag "$arg"
 
-		else
-			out:fail "No such file $arg"
-		fi
-	done
+        else
+            out:fail "No such file $arg"
+        fi
+    done
 }
 
 main() {
-	autohelp:check "$@"
+    autohelp:check "$@"
 
-	BBUILD_ENV_FILE=./bbuildrc
+    BBUILD_ENV_FILE=./bbuildrc
 
-	# --- Defaults
-	: ${BBPATH=./}
-	: ${BUILDOUTD=./build-outd}
-	: ${SHELLCHECK=false}
+    # --- Defaults
+    : ${BBPATH=./}
+    : ${BUILDOUTD=./build-outd}
+    : ${SHELLCHECK=false}
 
-	# --- Settings file
-	load_project_environment
+    # --- Settings file
+    load_project_environment
 
-	# --- Command line
-	build_files_list "$@"
+    # --- Command line
+    build_files_list "$@"
 
-	# ++++++++++++++++
-	# Now we process.
+    # ++++++++++++++++
+    # Now we process.
 
-	setup_build_dir
+    setup_build_dir
 
-	# BBFILES can be specified externally
-	# command line overrides this IFF specified
-	if [[ "${#prompt_file_list[@]}" -gt 0 ]]; then
-		out:debug "Prompt files list is ${prompt_file_list[*]}"
-		BBFILES=("${prompt_file_list[@]}")
-	fi
+    # BBFILES can be specified externally
+    # command line overrides this IFF specified
+    if [[ "${#prompt_file_list[@]}" -gt 0 ]]; then
+        out:debug "Prompt files list is ${prompt_file_list[*]}"
+        BBFILES=("${prompt_file_list[@]}")
+    fi
 
-	if [[ -z "${BBFILES[*]}" ]]; then
-		out:fail "No files to compile -- use a ./bbuildrc file to specify defaults (formerly bbuild_env)"
-	fi
-	
-	out:debug "And so, processing ${BBFILES[*]}"
+    if [[ -z "${BBFILES[*]}" ]]; then
+        out:fail "No files to compile -- use a ./bbuildrc file to specify defaults (formerly bbuild_env)"
+    fi
+    
+    out:debug "And so, processing ${BBFILES[*]}"
 
-	for infile in "${BBFILES[@]}"; do
-		build_script "$infile"
-	done
+    for infile in "${BBFILES[@]}"; do
+        build_script "$infile"
+    done
 }
 
 runmain bbuild main "$@"

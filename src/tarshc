@@ -9,52 +9,52 @@
 #%include autohelp.sh out.sh searchpaths.sh
 
 tarshc:locate_header() {
-	TARSHC_header="$(searchpaths:file_from "$BBPATH" tarheader.sh)" || :
+    TARSHC_header="$(searchpaths:file_from "$BBPATH" tarheader.sh)" || :
 
-	[[ -n "$TARSHC_header" ]] || out:fail "Could not locate an unpack script in or amongst [$BBPATH]"
+    [[ -n "$TARSHC_header" ]] || out:fail "Could not locate an unpack script in or amongst [$BBPATH]"
 }
 
 tarshc:derive_names() {
-	: ${TARSHC_name=$(basename "$PWD")}
+    : ${TARSHC_name=$(basename "$PWD")}
 
-	TARSHC_plain_archive="_$TARSHC_name.tar.gz"
-	TARSH_script_archive="$TARSHC_name.tgz.sh"
+    TARSHC_plain_archive="_$TARSHC_name.tar.gz"
+    TARSH_script_archive="$TARSHC_name.tgz.sh"
 }
 
 tarshc:pack() {
-	tar czf "$TARSHC_plain_archive" "$@"
+    tar czf "$TARSHC_plain_archive" "$@"
 
-	tar tzf "$TARSHC_plain_archive" | grep -q "^bin/main.sh" || {
-		out:fail "No bin/main.sh detected. [$TARSHC_plain_archive] --> [$TARSH_script_archive] failed."
-	}
+    tar tzf "$TARSHC_plain_archive" | grep -q "^bin/main.sh" || {
+        out:fail "No bin/main.sh detected. [$TARSHC_plain_archive] --> [$TARSH_script_archive] failed."
+    }
 }
 
 tarshc:combine() {
-	local md5sum datef
+    local md5sum datef
 
-	# This is intended for conflict resolution at unpack time, not content validation
-	md5sum="$(md5sum "$TARSHC_plain_archive"|cut -d' ' -f1)"
-	md5sum="${md5sum:0:8}"
+    # This is intended for conflict resolution at unpack time, not content validation
+    md5sum="$(md5sum "$TARSHC_plain_archive"|cut -d' ' -f1)"
+    md5sum="${md5sum:0:8}"
 
-	# For quick-reference; day date is enough
-	datef="$(date +%F)"
+    # For quick-reference; day date is enough
+    datef="$(date +%F)"
 
-	cat <(sed "s/%TARSH_ID%/$datef-$md5sum/" "$TARSHC_header") "$TARSHC_plain_archive" > "$TARSH_script_archive"
+    cat <(sed "s/%TARSH_ID%/$datef-$md5sum/" "$TARSHC_header") "$TARSHC_plain_archive" > "$TARSH_script_archive"
 
-	rm "$TARSHC_plain_archive"
-	chmod 755 "$TARSH_script_archive"
+    rm "$TARSHC_plain_archive"
+    chmod 755 "$TARSH_script_archive"
 }
 
 main() {
-	autohelp:check "$@"
+    autohelp:check "$@"
 
-	tarshc:locate_header
-	tarshc:derive_names
+    tarshc:locate_header
+    tarshc:derive_names
 
-	tarshc:pack "$@"
-	tarshc:combine "$@"
+    tarshc:pack "$@"
+    tarshc:combine "$@"
 
-	out:info "Built [$TARSH_script_archive]"
+    out:info "Built [$TARSH_script_archive]"
 }
 
 main "$@"
