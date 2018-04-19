@@ -122,6 +122,11 @@ set -euo pipefail
 #  except for configuration variables
 
 main() {
+    # Just pass all program arguments to autohelp
+    # If it finds a --help in the arguments, help is printed and
+    #   the script is exited
+    autohelp:check "$@"
+
     if [[ -n "$*" ]]; then
         out:debug "Processing actions ..."
         process_action "$@"
