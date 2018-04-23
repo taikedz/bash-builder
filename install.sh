@@ -9,12 +9,14 @@ pull_libraries() {
             echo "Could not clone default libraries repo [$libsurl]"
             exit 1
         }
-    else
-        (cd "$libsdir" && git pull ) || {
-            echo "Could not update the default libraries in '$libsdir' !"
-            exit 1
-        }
     fi
+
+    BASHLIBS_DEPENDENCY="$(cat libs-dependency)"
+
+    (cd "$libsdir" && git pull && git checkout "$BASHLIBS_DEPENDENCY") || {
+        echo "Could not update the default libraries in '$libsdir' !"
+        exit 1
+    }
     echo # just separate this operation
 }
 
