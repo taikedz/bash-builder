@@ -13,7 +13,7 @@ pull_libraries() {
 
     BASHLIBS_DEPENDENCY="$(cat libs-dependency)"
 
-    (cd "$libsdir" && git checkout master && git pull && git checkout "$BASHLIBS_DEPENDENCY") || {
+    (cd "$libsdir" && git status && git checkout master && git pull && git checkout "$BASHLIBS_DEPENDENCY") || {
         echo "Could not update the default libraries in '$libsdir' !"
         exit 1
     }
