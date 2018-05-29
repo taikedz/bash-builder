@@ -36,22 +36,22 @@ copyover_files() {
 
     local portdef=''
 
-    # Assert that chosen has a port def and extract it, or do nothing (`:`) (to evade the on-error bailout)
-    [[ "$chosen" =~ :[0-9]+$ ]] && {
+    # Assert that `chosen` has a port definition and extract it
+    if [[ "$chosen" =~ :[0-9]+$ ]]; then
         portdef="-P ${chosen#*:}"
         chosen="${chosen%:*}"
-    } || :
+    fi
 
     local dest="$1"; shift
     
     case "$action" in
     /push)
         out:info "Copying [$*] to [$chosen:$dest]"
-        # Do not quote portdef as it has multiple tokens
+        # Do not quote portdef as it has [0-N] tokens
         scp ${portdef:-} "$@" "$chosen:$dest"
         ;;
     /pull)
-        out:info "Copying each [$*] in [$chosen] to local [$dest]"
+        out:info "Copying each [$*] from [$chosen] to local [$dest]"
 
         #FIXME note: cannot process spaces in arrays properly in bash
         remotefiles=( $(remote_files_tokens "$chosen" "$@") )
