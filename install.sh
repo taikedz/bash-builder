@@ -64,7 +64,7 @@ run_build() {
 
     echo -e "\033[32;1mSuccessfully installed 'bbuild', 'bashdoc', 'tarshc' to [$binsd]\033[0m"
 
-    if ! which shellcheck 2>&1 >/dev/null ; then
+    if ! which shellcheck >/dev/null 2>&1 ; then
         echo -e '\n\tConsider installing "shellcheck"\n'
     fi
 }
