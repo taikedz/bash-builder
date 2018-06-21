@@ -1,0 +1,12 @@
+#!/bin/bash
+
+#%include cdiff.sh out.sh
+
+validf() {
+    [[ -f "$1" ]] || [[ -L "$1" ]] || out:fail "Not a valid file: [$1]"
+}
+
+validf "${1:-}"
+validf "${2:-}"
+
+cdiff "$@"
