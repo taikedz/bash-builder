@@ -1,0 +1,26 @@
+#!/bin/bash
+
+### Colorized diff Usage:help
+#
+# Print a colorized unified diff of two files, or colorize unified diff output from stdin
+#
+#   cdiff file1 file2
+#
+#   scm diff file | cdiff -
+#
+###/doc
+
+#%include cdiff.sh out.sh
+
+validf() {
+    [[ -f "$1" ]] || [[ -L "$1" ]] || out:fail "Not a valid file: [$1]"
+}
+
+if [[ "${1:-}" = - ]]; then
+    colorize # process stdin
+else
+    validf "${1:-}"
+    validf "${2:-}"
+
+    cdiff "$@"
+fi
