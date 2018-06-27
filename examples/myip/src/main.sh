@@ -18,11 +18,12 @@ chomp() {
 
 get_default_device() {
     # Presume the first default route in the routing table gives us the main interface
-    ip route | grep default | head -n 1 | grep -Po 'dev\s+[a-z0-9]+' | chomp "dev "
+    ip route | grep default | head -n 1 | grep -Po 'dev\s+[a-z0-9:@]+' | chomp "dev "
 }
 
 extract_inets() {
-    grep -Po "inet\\s+[0-9.]+"| chomp "inet "
+    local device="$1"
+    grep "$device$" | grep -Po "inet\\s+[0-9.]+" | chomp "inet "
 }
 
 ip_for_device() {
@@ -32,7 +33,7 @@ ip_for_device() {
     ### The tgz.sh's `bin/` directory is automatically added to the front of the PATH
     ###  so we can invoke `find_section.py` directly
 
-    ip a | find_section.py "$device" | extract_inets
+    ip a | find_section.py "$device" | extract_inets "$device"
 }
 
 main() {
