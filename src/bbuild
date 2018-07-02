@@ -79,7 +79,7 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 #%include runmain.sh
 
-#%include autohelp.sh out.sh includefile2.sh bincheck.sh
+#%include autohelp.sh out.sh debug.sh includefile2.sh bincheck.sh
 
 setup_build_dir() {
     mkdir -p "$BUILDOUTD" || out:fail "Cannot create the output directory !"
@@ -119,7 +119,7 @@ checktags() {
                 out:fail "TAGS: $tag"
                 ;;
             *)	
-                out:debug "TAGS: $tag"
+                debug:print "TAGS: $tag"
                 ;;
         esac
     done
@@ -185,7 +185,7 @@ parse_flag() {
 build_files_list() {
     for arg in "$@"; do
         if [[ -f "$arg" ]]; then
-            out:debug "File ${#prompt_file_list[@]} for processing: $arg"
+            debug:print "File ${#prompt_file_list[@]} for processing: $arg"
             prompt_file_list[${#prompt_file_list[@]}]="$arg"
 
         elif [[ "$arg" =~ ^- ]]; then
@@ -221,7 +221,7 @@ main() {
     # BBFILES can be specified externally
     # command line overrides this IFF specified
     if [[ "${#prompt_file_list[@]}" -gt 0 ]]; then
-        out:debug "Prompt files list is ${prompt_file_list[*]}"
+        debug:print "Prompt files list is ${prompt_file_list[*]}"
         BBFILES=("${prompt_file_list[@]}")
     fi
 
@@ -229,7 +229,7 @@ main() {
         out:fail "No files to compile -- use a ./bbuildrc file to specify defaults (formerly bbuild_env)"
     fi
     
-    out:debug "And so, processing ${BBFILES[*]}"
+    debug:print "And so, processing ${BBFILES[*]}"
 
     for infile in "${BBFILES[@]}"; do
         build_script "$infile"
