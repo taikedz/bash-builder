@@ -276,3 +276,8 @@ If you know where files will be, you can source them directly
 	. "$HOME/.local/lib/myapp/file1.sh"
 
 Otherwise, use [bash builder](https://github.com/taikedz/bash-builder) to aggregate your separate files into single executables !
+
+## Additional resources
+
+* [Common bash gitchas](http://mywiki.wooledge.org/BashPitfalls)
+* [Gogole's Shell Style Guide](https://google.github.io/styleguide/shell.xml)
