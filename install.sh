@@ -5,8 +5,8 @@ set -euo pipefail
 pull_libraries() {
     echo "Updating libraries ..."
     if [[ ! -d "$libsdir" ]] && [[ ! -L "$libsdir" ]]; then
-        git clone "$libsurl" || {
-            echo "Could not clone default libraries repo [$libsurl]"
+        git clone "$libsurl" bash-libs || {
+            echo "Could not clone default libraries repo [$libsurl] to [bash-libs]"
             exit 1
         }
     fi
@@ -35,7 +35,7 @@ set_paths() {
     fi
 }
 
-environment_configuration() {
+configure_install_environment() {
     if [[ ! "$PATH" =~ "$binsd" ]]; then
         echo "export PATH=\$PATH:$binsd" >> "$BASHRCPATH"
     fi
@@ -54,13 +54,16 @@ run_verify() {
     fi
 }
 
-run_build() {
+build_and_install() {
     bash bash-libs/install.sh
 
     BUILDFILES=(src/bashdoc src/bbuild src/tarshc)
 
     BBPATH="$libsdir" bash bootstrap/bootstrap-bbuild5 "${BUILDFILES[@]}" "$@" || exit 1
-    cp ./build-outd/bbuild ./build-outd/bashdoc ./build-outd/tarshc "$binsd/"
+    cp ./build-outd/bbuild ./build-outd/bashdoc ./build-outd/tarshc "$binsd/" || {
+        echo -e "\033[31;1mFailed installing to [$binsd]\033[0m"
+        exit 1
+    }
 
     echo -e "\033[32;1mSuccessfully installed 'bbuild', 'bashdoc', 'tarshc' to [$binsd]\033[0m"
 
@@ -74,8 +77,8 @@ main() {
     set_paths
     pull_libraries
     run_verify "$@"
-    environment_configuration
-    run_build
+    configure_install_environment
+    build_and_install
 }
 
 main "$@"
