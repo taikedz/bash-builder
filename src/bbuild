@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION_NUM=5.1.1
+VERSION_NUM=5.2
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {
@@ -86,6 +86,9 @@ setup_build_dir() {
 }
 
 load_project_environment() {
+    # preventer is not true || or if it is, bail
+    [[ "${NO_LOAD_BBUILDRC:-}" != true ]] || return 0
+
     if [[ -f  "$BBUILD_ENV_FILE" ]]; then
         . "$BBUILD_ENV_FILE" || out:fail "Error during inclusion of environment file."
     fi

@@ -2,21 +2,60 @@
 
 set -euo pipefail
 
+SCRIPTDIR="$(cd $(dirname "$0"); pwd)"
+
+parse_args() {
+    local arg
+
+    for arg in "$@"; do
+        case "$arg" in
+        --no-pull)
+            # Don't try to pull commits from github/libs-dependency
+            NO_UPDATE=true
+            ;;
+        --no-dependency)
+            # Don't honour libs-dependency file
+            NO_USE_DEPENDENCY=true
+            NO_UPDATE=true
+            ;;
+        --no-install)
+            # Do not install after build
+            NO_INSTALL=true
+            ;;
+        verify)
+            # Perform the verification task
+            DO_VERIFY=true
+            ;;
+        *)
+            die "Unknown option '$arg'"
+            ;;
+        esac
+    done
+}
+
+die() {
+    echo -e "$*" >&2
+    exit 1
+}
+
 pull_libraries() {
     echo "Updating libraries ..."
-    if [[ ! -d "$libsdir" ]] && [[ ! -L "$libsdir" ]]; then
-        git clone "$libsurl" bash-libs || {
-            echo "Could not clone default libraries repo [$libsurl] to [bash-libs]"
-            exit 1
-        }
+    if [[ ! -d "$libsdir" ]]; then
+        git clone "$libsurl" bash-libs || \
+            die "Could not clone default libraries repo [$libsurl] to [bash-libs]"
     fi
 
     BASHLIBS_DEPENDENCY="$(cat libs-dependency)"
 
-    (cd "$libsdir" && git status && git checkout master && git pull && git checkout "$BASHLIBS_DEPENDENCY") || {
-        echo "Could not update the default libraries in '$libsdir' !"
-        exit 1
-    }
+    if [[ "${NO_UPDATE:-}" != true ]]; then
+	    (cd "$libsdir" && git status && git checkout master && git pull) || \
+		    die "Could not update the default libraries in '$libsdir' !"
+    fi
+
+    if [[ "${NO_USE_DEPENDENCY:-}" != true ]]; then
+        (cd "$libsdir" && git checkout "$BASHLIBS_DEPENDENCY")
+    fi
+
     echo # just separate this operation
 }
 
@@ -35,7 +74,7 @@ set_paths() {
     fi
 }
 
-configure_install_environment() {
+environment_configuration() {
     if [[ ! "$PATH" =~ "$binsd" ]]; then
         echo "export PATH=\$PATH:$binsd" >> "$BASHRCPATH"
     fi
@@ -48,22 +87,30 @@ configure_install_environment() {
 }
 
 run_verify() {
-    if [[ "$*" =~ --verify ]]; then
-        BBEXEC="$PWD/bootstrap/bootstrap-bbuild5" bash-libs/verify.sh
+    if [[ "${DO_VERIFY:-}" = true ]]; then
+        # Note - uses environment BBEXEC
+        bash-libs/verify.sh
         exit "$?"
     fi
 }
 
-build_and_install() {
-    bash bash-libs/install.sh
+run_build() {
+    local installed_libs
+
+    installed_libs="$(bash bash-libs/install.sh|grep -oP '(?<=\[)[^ ]+?(?=\])')" || die "Error getting installed path of libraries"
 
     BUILDFILES=(src/bashdoc src/bbuild src/tarshc)
 
-    BBPATH="$libsdir" bash bootstrap/bootstrap-bbuild5 "${BUILDFILES[@]}" "$@" || exit 1
-    cp ./build-outd/bbuild ./build-outd/bashdoc ./build-outd/tarshc "$binsd/" || {
-        echo -e "\033[31;1mFailed installing to [$binsd]\033[0m"
-        exit 1
-    }
+    NO_LOAD_BBUILDRC=true BBPATH="$installed_libs" bash "${BBEXEC}" "${BUILDFILES[@]}" || exit 1
+}
+
+install_files() {
+    if [[ "${NO_INSTALL:-}" = true ]]; then
+        return 0
+    fi
+
+    cp ./build-outd/bbuild ./build-outd/bashdoc ./build-outd/tarshc "$binsd/" || \
+        die "\033[31;1mFailed installing to [$binsd]\033[0m"
 
     echo -e "\033[32;1mSuccessfully installed 'bbuild', 'bashdoc', 'tarshc' to [$binsd]\033[0m"
 
@@ -73,12 +120,17 @@ build_and_install() {
 }
 
 main() {
+    : "${BBEXEC=$SCRIPTDIR/bootstrap/bootstrap-bbuild5}"
+
+    parse_args "$@"
     cd "$(dirname "$0")"
     set_paths
     pull_libraries
-    run_verify "$@"
-    configure_install_environment
-    build_and_install
+    run_verify
+    environment_configuration
+
+    run_build
+    install_files
 }
 
 main "$@"

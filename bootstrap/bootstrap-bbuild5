@@ -577,7 +577,7 @@ includefile:_cat_once() {
 	for item in "$@"; do
 		[[ -n "$item" ]] || continue
 
-		fullpath="$(searchpaths:file_from "$INCLUDEFILE_paths" "$item")"
+		fullpath="$(searchpaths:file_from "$INCLUDEFILE_paths" "$item")" || out:fail "Error including '$item'"
 		if [[ -z "$fullpath" ]]; then
 			return 1
 		fi
@@ -676,6 +676,9 @@ setup_build_dir() {
 }
 
 load_project_environment() {
+    # preventer is not true || or if it is, bail
+    [[ "${NO_LOAD_BBUILDRC:-}" != true ]] || return 0
+
 	if [[ -f  "$BBUILD_ENV_FILE" ]]; then
 		. "$BBUILD_ENV_FILE" || out:fail "Error during inclusion of environment file."
 	fi
@@ -816,6 +819,7 @@ main() {
 	fi
 	
 	out:debug "And so, processing ${BBFILES[*]}"
+
 
 	for infile in "${BBFILES[@]}"; do
 		build_script "$infile"
