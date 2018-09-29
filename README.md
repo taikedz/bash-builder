@@ -8,7 +8,7 @@ For more on writing cleaner bash scripts, see the [clean writing notes](docs/wri
 
 ## What is this?
 
-Bash Builder is a tool to help writing bash scripts as multiple files, but combining and distributing as a single file. Note that this is specifically intended for use with GNU bash - strict POSIX `sh` usage is not supported.
+Bash Builder is a tool to help writing bash scripts as multiple files, but combining and distributing as a single file.
 
 Bash, as a language, lacks a usable mechanism to allow developing separate, loosely-related components in separate files, and building libraries of such files for re-use.
 
@@ -19,6 +19,8 @@ The Bash Builder project aims to provide such a structure:
 * a default library of useful functions to make developing in bash clearer and cleaner
 * a utility to collect and bundle assets and external scripts into a single executable
 
+Note that this is specifically intended for use with GNU bash - strict POSIX `sh` usage is not supported; run the copmatibility check using `bash src/compatibility.sh` to check that all tools on the system match the required versions.
+
 ## Installing
 
 Clone this repository, run the installation file.
@@ -26,8 +28,8 @@ Clone this repository, run the installation file.
 	git clone https://github.com/taikedz/bash-builder
 	cd bash-builder
 
-	# Verify only (no install)
-	./install.sh --verify
+	# Run compatibility check and verify the libraries
+	./install.sh verify
 
 	# Actually perform installation
 	./install.sh

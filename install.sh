@@ -88,6 +88,7 @@ environment_configuration() {
 
 run_verify() {
     if [[ "${DO_VERIFY:-}" = true ]]; then
+
         # Note - uses environment BBEXEC
         bash-libs/verify.sh
         exit "$?"
@@ -119,11 +120,20 @@ install_files() {
     fi
 }
 
+compatibility_check() {
+    if [[ "$DO_VERIFY" ]]; then
+        . "$SCRIPTDIR/src/compatibility.sh"
+        compatibility:verify || die "Incompatible environment - are you using a GNU/Linux ?"
+    fi
+}
+
 main() {
     : "${BBEXEC=$SCRIPTDIR/bootstrap/bootstrap-bbuild5}"
 
     parse_args "$@"
-    cd "$(dirname "$0")"
+    compatibility_check
+
+    cd "$SCRIPTDIR"
     set_paths
     pull_libraries
     run_verify
