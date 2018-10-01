@@ -1,6 +1,6 @@
 # Bash Builder
 
-(C) 2017 Tai Kedzierski, provided under GNU General Public License v3.0.
+(C) 2017-2018 Tai Kedzierski, provided under GNU General Public License v3.0.
 
 A toolset for managing bash snippets/libraries, managing in-line documentation, and bundling assets into single executables.
 
@@ -80,9 +80,14 @@ Of note for now:
 You can now declare functions using variable names in the function signature:
 
 ```sh
-$%function copyfrom(host user path) {
-    scp "$user@$host:$path"
+$%function copyfrom(host user dest) {
+    for srcdir in "$@"; do
+        scp "$user@$host:$srcdir" "$dest"
+    done
 }
+
+# The first three arguments are assigned to the names ; the rest remain available in "$@"
+copyfrom server me ./downloads /etc/hosts /home/user/backup.log
 ```
 
 If fewer arguments than the number named are provided at runtime, the script/subshell will exit, detailing which variable could not be assigned.
