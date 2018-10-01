@@ -98,7 +98,7 @@ run_verify() {
 run_build() {
     local installed_libs
 
-    installed_libs="$(bash bash-libs/install.sh|grep -oP '(?<=\[)[^ ]+?(?=\])')" || die "Error getting installed path of libraries"
+    installed_libs="$(bash bash-libs/install.sh|tee /dev/stderr|grep -oP '(?<=\[)[^ ]+?(?=\])')" || die "Error getting installed path of libraries"
 
     BUILDFILES=(src/bashdoc src/bbuild src/tarshc)
 
@@ -121,7 +121,7 @@ install_files() {
 }
 
 compatibility_check() {
-    if [[ "$DO_VERIFY" ]]; then
+    if [[ "${DO_VERIFY:-}" ]]; then
         . "$SCRIPTDIR/src/compatibility.sh"
         compatibility:verify || die "Incompatible environment - are you using a GNU/Linux ?"
     fi
