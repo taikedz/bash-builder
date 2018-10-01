@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION_NUM=5.2
+VERSION_NUM=5.3
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {
@@ -77,9 +77,13 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 #
 ###/doc
 
-#%include runmain.sh
-
-#%include autohelp.sh out.sh debug.sh includefile2.sh bincheck.sh
+#%include autohelp.sh
+#%include args.sh
+#%include out.sh 
+#%include debug.sh 
+#%include includefile2.sh 
+#%include bincheck.sh
+#%include syntax.sh
 
 setup_build_dir() {
     mkdir -p "$BUILDOUTD" || out:fail "Cannot create the output directory !"
@@ -128,12 +132,11 @@ checktags() {
     done
 }
 
-build_script() {
-    local infile="$1"; shift
-    local t_BBPATH="$(dirname "$infile"):$BBPATH"
+$%function build_script(infile) {
+    $%t_BBPATH="$(dirname "$infile"):$BBPATH"
 
-    local fname="$(basename "$infile")"
-    local tfile="$BUILDOUTD/$fname"
+    $%tfname="$(basename "$infile")"
+    $%tfile="$BUILDOUTD/$tfname"
 
     out:info "Building $infile to $tfile"
 
@@ -141,6 +144,8 @@ build_script() {
     INCLUDEFILE_paths="$t_BBPATH"
 
     includefile:process "$infile" > "$tfile" || out:fail "Inclusion on $tfile failed : [${INCLUDEFILE_failed:-}]"
+
+    bbuild:syntax_post "$tfile" || out:fail "Syntax post-processing on $tfile failed"
 
     do_shellcheck "$tfile"
     checktags "$tfile"
@@ -239,4 +244,4 @@ main() {
     done
 }
 
-runmain bbuild main "$@"
+main "$@"

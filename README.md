@@ -67,6 +67,48 @@ If you have `shellcheck` installed, you can also have it run against the compile
 
 See `bbuild --help` for more information.
 
+#### Syntax post-processor
+
+A syntactic post-processor is implemented as of 5.3 !
+
+It's quite basic, but will expand in feature set over time, to overcome some of the more limiting facets of bash programming
+
+Of note for now:
+
+**Function signatures**
+
+You can now declare functions using variable names in the function signature:
+
+```sh
+$%function copyfrom(host user path) {
+    scp "$user@$host:$path"
+}
+```
+
+If fewer arguments than the number named are provided at runtime, the script/subshell will exit, detailing which variable could not be assigned.
+
+**Argument consuming**
+
+You can also explicitly consume arguments in a less verbose way, when using strict mode. Whereas you might have needed to do the following previously:
+
+```sh
+set -eu
+
+myfunc() {
+    local arg="${1:-}"; shift || out:fail "First argument not specified"
+}
+```
+
+you can now simyply write the following to take care of the verbose section
+
+```sh
+set -eu
+
+myfunc() {
+    $%arg=$%1 || out:fail "First argument not specified"
+}
+```
+
 ### `bashdoc`
 
 Processor for a simple, general documentation format that allows you to insert documentation comments in your files, and extract them; documentation comments should be in [Markdown](https://daringfireball.net/projects/markdown/) - this allows them to simply be printed on-screen, or to file for further transformation into web pages.

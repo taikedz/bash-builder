@@ -23,8 +23,9 @@ bbuild:syntax_post() {
 }
 
 bbuild:syntax:use() {
-    [[ "$BBUILD_syntax_features" =~ syntax ]] ||
-	[[ "$BBUILD_syntax_features" =~ "$1" ]]
+    [[ -n "${BBSYNTAX[*]}" ]] &&
+        [[ "$BBSYNTAX" =~ syntax ]] ||
+        [[ "$BBSYNTAX" =~ "$1" ]]
 }
 
 ### expandarg1 Usage:bbuild
@@ -47,7 +48,7 @@ bbuild:syntax:use() {
 #
 ##/doc
 bbuild:syntax:expand_arg1() {
-	bbuild:syntax:use expandarg1 || return
+	bbuild:syntax:use expandarg1 || return 0
 	# adjacent quotes prevent this code from mangling itself
 	sed -r 's/=\$''%1\s*/="${1:-}"; shift /g' -i "$1"
 }
@@ -70,7 +71,7 @@ bbuild:syntax:expand_arg1() {
 # 	    }
 ###/doc
 bbuild:syntax:expand_local() {
-	bbuild:syntax:use expandlocal || return
+	bbuild:syntax:use expandlocal || return 0
 	sed -r 's/^(\s*)\$''%([a-zA-Z0-9_]+)=/\1local \2=/g' -i "$1"
 }
 
@@ -93,7 +94,7 @@ bbuild:syntax:expand_local() {
 # 	    }
 ###/doc
 bbuild:syntax:expand_function_signatures() {
-	bbuild:syntax:use expandfsig || return
+	bbuild:syntax:use expandfsig || return 0
     sed -r 's/^(\s*)\$''%function\s*([a-zA-Z0-9_:.-]+)\(([^)]+?)\)\s+\{''/''\1\2() {\n\1    . <(args:use:local \3 -- "$@") ; ''/' -i "$1"
 }
 
@@ -104,7 +105,7 @@ bbuild:syntax:expand_function_signatures() {
 #   (
 #       . src/syntax.sh
 #       bbuild test-syntax.sh
-#       BBUILD_syntax_features=syntax bbuild:syntax_post build-outd/test-syntax.sh # This will eventually integrate to bbuild itself
+#       BBSYNTAX=syntax bbuild:syntax_post build-outd/test-syntax.sh # This will eventually integrate to bbuild itself
 #       build-outd/test-syntax.sh Alice Bob "extra data"
 #   )
 
