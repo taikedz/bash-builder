@@ -4,23 +4,69 @@ set -euo pipefail
 
 SCRIPTDIR="$(cd $(dirname "$0"); pwd)"
 
+printhelp() {
+cat <<EOHELP
+
+Install Bash Builder
+
+    ./install.sh [verify] [OPTION ...]
+
+With no specified action, installs the libraries and executables. 
+
+If run as non-root user, will install files to ~/.local/{bin,lib}
+
+If run as root user, will install files to /usr/local/{bin,lib}
+
+With the "verify" action, runs the compatibility check, then runs the libraries verification routines. Installs nothing.
+
+Options:
+
+--no-pull
+    Don't try to pull/update the bash-libs/ repository
+
+--depend=REF
+    Checkout the specified reference REF in bash-libs/
+    e.g. "1.1.6" or "master" or "98aef87"
+
+--no-dependency
+    Do not try to change the state of bash-libs/
+    Overrides --depend=*
+
+--no-install
+    Perform the build, but do not install files
+    Does not install libs files either
+
+--clear-libs
+    Clear existing files from the destination library dir (~/.local/lib/bbuild or /usr/local/lib/bbuild)
+        before installing the new files
+
+EOHELP
+}
+
 parse_args() {
     local arg
 
     for arg in "$@"; do
         case "$arg" in
+        --help|-h)
+            printhelp
+            exit 0
+            ;;
         --no-pull)
-            # Don't try to pull commits from github/libs-dependency
             NO_UPDATE=true
             ;;
         --no-dependency)
-            # Don't honour libs-dependency file
             NO_USE_DEPENDENCY=true
             NO_UPDATE=true
             ;;
         --no-install)
-            # Do not install after build
             NO_INSTALL=true
+            ;;
+        --depend=*)
+            DEPEND="${arg#--depend=}"
+            ;;
+        --clear-libs)
+            CLEAR_LIBS=true
             ;;
         verify)
             # Perform the verification task
@@ -45,7 +91,7 @@ pull_libraries() {
             die "Could not clone default libraries repo [$libsurl] to [bash-libs]"
     fi
 
-    BASHLIBS_DEPENDENCY="$(cat libs-dependency)"
+    BASHLIBS_DEPENDENCY="${DEPEND:-$(cat libs-dependency)}"
 
     if [[ "${NO_UPDATE:-}" != true ]]; then
 	    (cd "$libsdir" && git status && git checkout master && git pull) || \
@@ -96,13 +142,17 @@ run_verify() {
 }
 
 run_build() {
-    local installed_libs
-
-    installed_libs="$(bash bash-libs/install.sh|tee /dev/stderr|grep -oP '(?<=\[)[^ ]+?(?=\])')" || die "Error getting installed path of libraries"
+    if [[ "${NO_INSTALL:-}" = true ]]; then
+        BBPATH="$libsdir"
+    else
+        BBPATH="$(
+            CLEAR_EXISTING_LIBS="${CLEAR_LIBS:-}" bash bash-libs/install.sh|tee /dev/stderr|grep -oP '(?<=\[)[^ ]+?(?=\])'
+        )" || die "Error getting installed path of libraries"
+    fi
 
     BUILDFILES=(src/bashdoc src/bbuild src/tarshc)
 
-    NO_LOAD_BBUILDRC=true BBSYNTAX=syntax BBPATH="$installed_libs" bash "${BBEXEC}" "${BUILDFILES[@]}" || exit 1
+    NO_LOAD_BBUILDRC=true BBSYNTAX=syntax bash "${BBEXEC}" "${BUILDFILES[@]}" || exit 1
 }
 
 install_files() {
