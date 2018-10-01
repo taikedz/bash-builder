@@ -1,12 +1,12 @@
 #!/bin/bash
 
-VERSION_NUM=5.0.1
+VERSION_NUM=5.3
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {
-	echo "$VERSION_NUM"
-	echo "$VERSION_NOTE"
-	exit
+    echo "$VERSION_NUM"
+    echo "$VERSION_NOTE"
+    exit
 }
 
 ### Bash Builder 5 Usage:help
@@ -62,7 +62,7 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 #
 # BUILDOUTD -- directory in which to place build results
 #
-#	BUILDOUTD=./build-outd
+#    BUILDOUTD=./build-outd
 #
 #
 # IGNORETAGS -- if set to "unsafe", ignores tags and their effects.
@@ -77,161 +77,16 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 #
 ###/doc
 
-### runmain SCRIPTNAME FUNCTION [ARGUMENTS ...] Usage:bbuild
-#
-# Runs the function FUNCTION with ARGUMENTS, only if the runtime
-# name of the script matches SCRIPTNAME
-#
-# This allows you include a main-like function in your library
-# that only runs if you use your lib as an executabl itself.
-#
-# For example, an image archiver could be:
-#
-# 	function archive_images {
-# 		tar czf "$1.tgz" "$@"
-# 	}
-#
-# 	runmain archiveimages.sh archive_images "$@"
-#
-# When included a different script, the runmain call does not fire the lib's function
-#
-# If the lib is compiled/made executable, and named "archiveimages.sh", the function runs.
-#
-# This is similar to `if __name__ == "__main__"` clauses in python
-#
-###/doc
+##bash-libs: out.sh @ %COMMITHASH%
 
-function runmain {
-	local required_name="$1"; shift || :
-	local funcall="$1"; shift || :
-	local scriptname="$(basename "$0")"
-
-	if [[ "$required_name" = "$scriptname" ]]; then
-		"$funcall" "$@"
-	fi
-}
-
-#!/bin/bash
-
-### autohelp:print [ SECTION [FILE] ] Usage:bbuild
-# Write your help as documentation comments in your script
-#
-# If you need to output the help from your script, or a file, call the
-# `autohelp:print` function and it will print the help documentation
-# in the current script to stdout
-#
-# A help comment looks like this:
-#
-#	### <title> Usage:help
-#	#
-#	# <some content>
-#	#
-#	# end with "###/doc" on its own line (whitespaces before
-#	# and after are OK)
-#	#
-#	###/doc
-#
-# You can set a different help section by specifying a subsection
-#
-# 	autohelp:print section2
-#
-# > This would print a section defined in this way:
-#
-# 	### Some title Usage:section2
-# 	# <some content>
-# 	###/doc
-#
-# You can set a different comment character by setting the 'HELPCHAR' environment variable:
-#
-# 	HELPCHAR=%
-#
-###/doc
-
-HELPCHAR='#'
-
-function autohelp:print {
-	local SECTION_STRING="${1:-}"; shift || :
-	local TARGETFILE="${1:-}"; shift || :
-	[[ -n "$SECTION_STRING" ]] || SECTION_STRING=help
-	[[ -n "$TARGETFILE" ]] || TARGETFILE="$0"
-
-        echo -e "\n$(basename "$TARGETFILE")\n===\n"
-        local SECSTART='^\s*'"$HELPCHAR$HELPCHAR$HELPCHAR"'\s+(.+?)\s+Usage:'"$SECTION_STRING"'\s*$'
-        local SECEND='^\s*'"$HELPCHAR$HELPCHAR$HELPCHAR"'\s*/doc\s*$'
-        local insec=false
-
-        while read secline; do
-                if [[ "$secline" =~ $SECSTART ]]; then
-                        insec=true
-                        echo -e "\n${BASH_REMATCH[1]}\n---\n"
-
-                elif [[ "$insec" = true ]]; then
-                        if [[ "$secline" =~ $SECEND ]]; then
-                                insec=false
-                        else
-				echo "$secline" | sed -r "s/^\s*$HELPCHAR//g"
-                        fi
-                fi
-        done < "$TARGETFILE"
-
-        if [[ "$insec" = true ]]; then
-                echo "WARNING: Non-terminated help block." 1>&2
-        fi
-	echo ""
-}
-
-### autohelp:paged Usage:bbuild
-#
-# Display the help in the pager defined in the PAGER environment variable
-#
-###/doc
-function autohelp:paged {
-	: ${PAGER=less}
-	autohelp:print "$@" | $PAGER
-}
-
-### autohelp:check Usage:bbuild
-#
-# Automatically print help and exit if "--help" is detected in arguments
-#
-# Example use:
-#
-#	#!/bin/bash
-#
-#	### Some help Usage:help
-#	#
-#	# Some help text
-#	#
-#	###/doc
-#
-#	#%include autohelp.sh
-#
-#	main() {
-#		autohelp:check "$@"
-#
-#		# now add your code
-#	}
-#
-#	main "$@"
-#
-###/doc
-autohelp:check() {
-	if [[ "$*" =~ --help ]]; then
-		cols="$(tput cols)"
-		autohelp:print | fold -w "$cols" -s || autohelp:print
-		exit 0
-	fi
-}
-#!/bin/bash
-
-#!/bin/bash
+##bash-libs: colours.sh @ %COMMITHASH%
 
 ### Colours for bash Usage:bbuild
 # A series of colour flags for use in outputs.
 #
 # Example:
 # 	
-# 	echo -e "${CRED}Some red text ${CBBLU} some blue text $CDEF some text in the terminal's default colour"
+# 	echo -e "${CRED}Some red text ${CBBLU} some blue text $CDEF some text in the terminal's default colour")
 #
 # Requires processing of escape characters.
 #
@@ -249,30 +104,104 @@ autohelp:check() {
 #
 # Note that highlight and underline must be applied or re-applied after specifying a colour.
 #
+# If the session is detected as being in a pipe, colours will be turned off.
+#   You can override this by calling `colours:check --color=always` at the start of your script
+#
 ###/doc
 
-export CRED="\033[0;31m"
-export CGRN="\033[0;32m"
-export CYEL="\033[0;33m"
-export CBLU="\033[0;34m"
-export CPUR="\033[0;35m"
-export CTEA="\033[0;36m"
+##bash-libs: tty.sh @ %COMMITHASH%
 
-export CBRED="\033[1;31m"
-export CBGRN="\033[1;32m"
-export CBYEL="\033[1;33m"
-export CBBLU="\033[1;34m"
-export CBPUR="\033[1;35m"
-export CBTEA="\033[1;36m"
+tty:is_ssh() {
+    [[ -n "$SSH_TTY" ]] || [[ -n "$SSH_CLIENT" ]] || [[ "$SSH_CONNECTION" ]]
+}
 
-export HLRED="\033[41m"
-export HLGRN="\033[42m"
-export HLYEL="\033[43m"
-export HLBLU="\033[44m"
-export HLPUR="\033[45m"
-export HLTEA="\033[46m"
+tty:is_pipe() {
+    [[ ! -t 1 ]]
+}
 
-export CDEF="\033[0m"
+### colours:check ARGS Usage:bbuild
+#
+# Check the args to see if there's a `--color=always` or `--color=never`
+#   and reload the colours appropriately
+#
+###/doc
+colours:check() {
+    if [[ "$*" =~ --color=always ]]; then
+        COLOURS_ON=true
+    elif [[ "$*" =~ --color=never ]]; then
+        COLOURS_ON=false
+    fi
+
+    colours:define
+    return 0
+}
+
+colours:auto() {
+    if tty:is_pipe ; then
+        COLOURS_ON=false
+    else
+        COLOURS_ON=true
+    fi
+
+    colours:define
+    return 0
+}
+
+colours:define() {
+    if [[ "$COLOURS_ON" = false ]]; then
+
+        export CRED=''
+        export CGRN=''
+        export CYEL=''
+        export CBLU=''
+        export CPUR=''
+        export CTEA=''
+
+        export CBRED=''
+        export CBGRN=''
+        export CBYEL=''
+        export CBBLU=''
+        export CBPUR=''
+        export CBTEA=''
+
+        export HLRED=''
+        export HLGRN=''
+        export HLYEL=''
+        export HLBLU=''
+        export HLPUR=''
+        export HLTEA=''
+
+        export CDEF=''
+
+    else
+
+        export CRED=$(echo -e "\033[0;31m")
+        export CGRN=$(echo -e "\033[0;32m")
+        export CYEL=$(echo -e "\033[0;33m")
+        export CBLU=$(echo -e "\033[0;34m")
+        export CPUR=$(echo -e "\033[0;35m")
+        export CTEA=$(echo -e "\033[0;36m")
+
+        export CBRED=$(echo -e "\033[1;31m")
+        export CBGRN=$(echo -e "\033[1;32m")
+        export CBYEL=$(echo -e "\033[1;33m")
+        export CBBLU=$(echo -e "\033[1;34m")
+        export CBPUR=$(echo -e "\033[1;35m")
+        export CBTEA=$(echo -e "\033[1;36m")
+
+        export HLRED=$(echo -e "\033[41m")
+        export HLGRN=$(echo -e "\033[42m")
+        export HLYEL=$(echo -e "\033[43m")
+        export HLBLU=$(echo -e "\033[44m")
+        export HLPUR=$(echo -e "\033[45m")
+        export HLTEA=$(echo -e "\033[46m")
+
+        export CDEF=$(echo -e "\033[0m")
+
+    fi
+}
+
+colours:auto
 
 ### Console output handlers Usage:bbuild
 #
@@ -280,71 +209,32 @@ export CDEF="\033[0m"
 #
 ###/doc
 
-### Environment Variables Usage:bbuild
-#
-# MODE_DEBUG : set to 'true' to enable debugging output
-# MODE_DEBUG_VERBOSE : set to 'true' to enable command echoing
-#
-###/doc
-
-: ${MODE_DEBUG=false}
-: ${MODE_DEBUG_VERBOSE=false}
-
-# Internal
-function out:buffer_initialize {
-	OUTPUT_BUFFER_defer=(:)
-}
-out:buffer_initialize
-
-### out:debug MESSAGE Usage:bbuild
-# print a blue debug message to stderr
-# only prints if MODE_DEBUG is set to "true"
-###/doc
-function out:debug {
-	if [[ "$MODE_DEBUG" = true ]]; then
-		echo -e "${CBBLU}DEBUG: $CBLU$*$CDEF" 1>&2
-	fi
-}
-
-### out:debug:fork [MARKER] Usage:bbuild
-#
-# Pipe the data coming through stdin to stdout
-#
-# If debug mode is on, *also* write the same data to stderr, each line preceded by MARKER
-#
-# Insert this debug fork into pipes to see their output
-#
-###/doc
-function out:debug:fork {
-	if [[ "$MODE_DEBUG" = true ]]; then
-		local MARKER="${1:-DEBUG: }"; shift || :
-
-		cat - | sed -r "s/^/$MARKER/" | tee -a /dev/stderr
-	else
-		cat -
-	fi
-}
-
 ### out:info MESSAGE Usage:bbuild
 # print a green informational message to stderr
 ###/doc
 function out:info {
-	echo -e "$CGRN$*$CDEF" 1>&2
+    echo "$CGRN$*$CDEF" 1>&2
 }
 
 ### out:warn MESSAGE Usage:bbuild
 # print a yellow warning message to stderr
 ###/doc
 function out:warn {
-	echo -e "${CBYEL}WARN: $CYEL$*$CDEF" 1>&2
+    echo "${CBYEL}WARN: $CYEL$*$CDEF" 1>&2
 }
 
 ### out:defer MESSAGE Usage:bbuild
 # Store a message in the output buffer for later use
 ###/doc
 function out:defer {
-	OUTPUT_BUFFER_defer[${#OUTPUT_BUFFER_defer[@]}]="$*"
+    OUTPUT_BUFFER_defer[${#OUTPUT_BUFFER_defer[@]}]="$*"
 }
+
+# Internal
+function out:buffer_initialize {
+    OUTPUT_BUFFER_defer=(:)
+}
+out:buffer_initialize
 
 ### out:flush HANDLER ... Usage:bbuild
 #
@@ -362,15 +252,15 @@ function out:defer {
 #
 ###/doc
 function out:flush {
-	[[ -n "$*" ]] || out:fail "Did not provide a command for buffered output\n\n${OUTPUT_BUFFER_defer[*]}"
+    [[ -n "$*" ]] || out:fail "Did not provide a command for buffered output\n\n${OUTPUT_BUFFER_defer[*]}"
 
-	[[ "${#OUTPUT_BUFFER_defer[@]}" -gt 1 ]] || return 0
+    [[ "${#OUTPUT_BUFFER_defer[@]}" -gt 1 ]] || return 0
 
-	for buffer_line in "${OUTPUT_BUFFER_defer[@]:1}"; do
-		"$@" "$buffer_line"
-	done
+    for buffer_line in "${OUTPUT_BUFFER_defer[@]:1}"; do
+        "$@" "$buffer_line"
+    done
 
-	out:buffer_initialize
+    out:buffer_initialize
 }
 
 ### out:fail [CODE] MESSAGE Usage:bbuild
@@ -379,15 +269,15 @@ function out:flush {
 # if no code is specified, error code 127 is used
 ###/doc
 function out:fail {
-	local ERCODE=127
-	local numpat='^[0-9]+$'
+    local ERCODE=127
+    local numpat='^[0-9]+$'
 
-	if [[ "$1" =~ $numpat ]]; then
-		ERCODE="$1"; shift || :
-	fi
+    if [[ "$1" =~ $numpat ]]; then
+        ERCODE="$1"; shift || :
+    fi
 
-	echo -e "${CBRED}ERROR FAIL: $CRED$*$CDEF" 1>&2
-	exit $ERCODE
+    echo "${CBRED}ERROR FAIL: $CRED$*$CDEF" 1>&2
+    exit $ERCODE
 }
 
 ### out:error MESSAGE Usage:bbuild
@@ -396,31 +286,509 @@ function out:fail {
 # unlike out:fail, does not cause script exit
 ###/doc
 function out:error {
-	echo -e "${CBRED}ERROR: ${CRED}$*$CDEF" 1>&2
+    echo "${CBRED}ERROR: ${CRED}$*$CDEF" 1>&2
 }
 
-### out:dump Usage:bbuild
+##bash-libs: autohelp.sh @ %COMMITHASH%
+
+### Autohelp Usage:bbuild
 #
-# Dump stdin contents to console stderr. Requires debug mode.
+# Autohelp provides some simple facilities for defining help as comments in your code.
+# It provides several functions for printing specially formatted comment sections.
 #
-# Example
+# Write your help as documentation comments in your script
 #
-# 	action_command 2>&1 | out:dump
+# To output a named section from your script, or a file, call the
+# `autohelp:print` function and it will print the help documentation
+# in the current script, or specified file, to stdout
+#
+# A help comment looks like this:
+#
+#    ### <title> Usage:help
+#    #
+#    # <some content>
+#    #
+#    # end with "###/doc" on its own line (whitespaces before
+#    # and after are OK)
+#    #
+#    ###/doc
+#
+# It can then be printed from the same script by simply calling
+#
+#   autohelp:print
+#
+# You can print a different section by specifying a different name
+#
+# 	autohelp:print section2
+#
+# > This would print a section defined in this way:
+#
+# 	### Some title Usage:section2
+# 	# <some content>
+# 	###/doc
+#
+# You can set a different comment character by setting the 'HELPCHAR' environment variable.
+# Typically, you might want to print comments you set in a INI config file, for example
+#
+# 	HELPCHAR=";" autohelp:print help config-file.ini
+# 
+# Which would then find comments defined like this in `config-file.ini`:
+#
+#   ;;; Main config Usage:help
+#   ; Help comments in a config file
+#   ; may start with a different comment character
+#   ;;;/doc
+#
+#
+#
+# Example usage in a multi-function script:
+#
+#   #!/bin/bash
+#
+#   ### Main help Usage:help
+#   # The main help
+#   ###/doc
+#
+#   ### Feature One Usage:feature_1
+#   # Help text for the first feature
+#   ###/doc
+#
+#   feature1() {
+#       autohelp:check_section feature_1 "$@"
+#       echo "Feature I"
+#   }
+#
+#   ### Feature Two Usage:feature_2
+#   # Help text for the second feature
+#   ###/doc
+#
+#   feature2() {
+#       autohelp:check_section feature_2 "$@"
+#       echo "Feature II"
+#   }
+#
+#   main() {
+#       if [[ -z "$*" ]]; then
+#           ### No command specified Usage:no-command
+#           #No command specified. Try running with `--help`
+#           ###/doc
+#
+#           autohelp:print no-command
+#           exit 1
+#       fi
+#
+#       case "$1" in
+#       feature1|feature2)
+#           "$1" "$@"            # Pass the global script arguments through
+#           ;;
+#       *)
+#           autohelp:check "$@"  # Check if main help was asked for, if so, exits
+#
+#           # Main help not requested, return error
+#           echo "Unknown feature"
+#           exit 1
+#           ;;
+#       esac
+#   }
+#
+#   main "$@"
 #
 ###/doc
 
-function out:dump {
-	echo -e -n "${CBPUR}$*" 1>&2
-	echo -e -n "$CPUR" 1>&2
-	cat - 1>&2
-	echo -e -n "$CDEF" 1>&2
+### autohelp:print [ SECTION [FILE] ] Usage:bbuild
+# Print the specified section, in the specified file.
+#
+# If no file is specified, prints for current script file.
+# If no section is specified, defaults to "help"
+###/doc
+
+HELPCHAR='#'
+
+autohelp:print() {
+    local input_line
+    local section_string="${1:-}"; shift || :
+    local target_file="${1:-}"; shift || :
+    [[ -n "$section_string" ]] || section_string=help
+    [[ -n "$target_file" ]] || target_file="$0"
+
+    #echo -e "\n$(basename "$target_file")\n===\n"
+    local sec_start='^\s*'"$HELPCHAR$HELPCHAR$HELPCHAR"'\s+(.+?)\s+Usage:'"$section_string"'\s*$'
+    local sec_end='^\s*'"$HELPCHAR$HELPCHAR$HELPCHAR"'\s*/doc\s*$'
+    local in_section=false
+
+    while read input_line; do
+        if [[ "$input_line" =~ $sec_start ]]; then
+            in_section=true
+            echo -e "\n${BASH_REMATCH[1]}\n======="
+
+        elif [[ "$in_section" = true ]]; then
+            if [[ "$input_line" =~ $sec_end ]]; then
+                in_section=false
+            else
+                echo "$input_line" | sed -r "s/^\s*$HELPCHAR/ /;s/^  (\S)/\1/"
+            fi
+        fi
+    done < "$target_file"
+
+    if [[ "$in_section" = true ]]; then
+            out:fail "Non-terminated help block."
+    fi
 }
 
-### out:break MESSAGE Usage:bbuild
+### autohelp:paged Usage:bbuild
+#
+# Display the help in the pager defined in the PAGER environment variable
+#
+###/doc
+autohelp:paged() {
+    : ${PAGER=less}
+    autohelp:print "$@" | $PAGER
+}
+
+### autohelp:check ARGS ... Usage:bbuild
+#
+# Automatically print "help" sections and exit, if "--help" is detected in arguments
+#
+###/doc
+autohelp:check() {
+    autohelp:check_section "help" "$@"
+}
+
+### autohelp:check_section SECTION ARGS ... Usage:bbuild
+# Automatically print documentation for named section and exit, if "--help" is detected in arguments
+#
+###/doc
+autohelp:check_section() {
+    local section arg
+    section="${1:-}"; shift || out:fail "No help section specified"
+
+    for arg in "$@"; do
+        if [[ "$arg" =~ --help ]]; then
+            cols="$(tput cols)"
+            autohelp:print "$section" | fold -w "$cols" -s || autohelp:print "$section"
+            exit 0
+        fi
+    done
+}
+##bash-libs: args.sh @ %COMMITHASH%
+
+##bash-libs: patterns.sh @ %COMMITHASH%
+
+### Useful patterns Usage:bbuild
+#
+# Some useful regex patterns, exported as environment variables.
+#
+# They are not foolproof, and you are encouraged to improve upon them.
+#
+# $PAT_blank - detects whether an entire line is empty or whitespace
+# $PAT_comment - detects whether is a line is a script comment (assumes '#' as the comment marker)
+# $PAT_num - detects whether the string is an integer number in its entirety
+# $PAT_cvar - detects if the string is a valid C variable name
+# $PAT_filename - detects if the string is a safe UNIX or Windows file name;
+#   does not allow presence of whitespace or special characters aside from '_', '.', '-'
+# $PAT_email - simple heuristic to determine whether a string looks like a valid email address
+#
+###/doc
+
+export PAT_blank='^\s*$'
+export PAT_comment='^\s*(#.*)?$'
+export PAT_num='^[0-9]+$'
+export PAT_cvar='^[a-zA-Z_][a-zA-Z0-9_]*$'
+export PAT_filename='^[a-zA-Z0-9_.-]$'
+export PAT_email="$PAT_filename@$PAT_filename.$PAT_cvar"
+
+### args Usage:bbuild
+#
+# An arguments handling utility.
+#
+###/doc
+
+### args:get TOKEN ARGS ... Usage:bbuild
+#
+# Given a TOKEN, find the argument value
+#
+# Typically called with the parent's arguments
+#
+# 	args:get --key "$@"
+# 	args:get -k "$@"
+#
+# If TOKEN is an int, returns the argument at that index (starts at 1, negative numbers count from end backwards)
+#
+# If TOKEN starts with two dashes ("--"), expect the value to be supplied after an equal sign
+#
+# 	--token=desired_value
+#
+# If TOKEN starts with a single dash, and is a letter or a number, expect the value to be the following token
+#
+# 	-t desired_value
+#
+# Returns 1 if could not find anything appropriate.
+#
+###/doc
+
+args:get() {
+    local seek="$1"; shift || :
+
+    if [[ "$seek" =~ $PAT_num ]]; then
+        local arguments=("$@")
+
+        # Get the index starting at 1
+        local n=$((seek-1))
+        # but do not affect wrap-arounds
+        [[ "$n" -ge 0 ]] || n=$((n+1))
+
+        echo "${arguments[$n]}"
+
+    elif [[ "$seek" =~ ^--.+ ]]; then
+        args:get_long "$seek" "$@"
+
+    elif [[ "$seek" =~ ^-[a-zA-Z0-9]$ ]]; then
+        args:get_short "$seek" "$@"
+
+    else
+        return 1
+    fi
+}
+
+args:get_short() {
+    local token="$1"; shift || :
+    while [[ -n "$*" ]]; do
+        local item="$1"; shift || :
+
+        if [[ "$item" = "$token" ]]; then
+            echo "$1"
+            return 0
+        fi
+    done
+    return 1
+}
+
+args:get_long() {
+    local token="$1"; shift || :
+    local tokenpat="^$token=(.*)$"
+
+    for item in "$@"; do
+        if [[ "$item" =~ $tokenpat ]]; then
+            echo "${BASH_REMATCH[1]}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+### args:has TOKEN ARGS ... Usage:bbuild
+#
+# Determines whether TOKEN is present on its own in ARGS
+#
+# Typically called with the parent's arguments
+#
+# 	args:has thing "$@"
+#
+# Returns 0 on success for example
+#
+# 	args:has thing "one" "thing" "or" "another"
+#
+# Returns 1 on failure for example
+#
+# 	args:has thing "one thing" "or another"
+#
+# "one thing" is not a valid match for "thing" as a token.
+#
+###/doc
+
+args:has() {
+    local token="$1"; shift || :
+    for item in "$@"; do
+        if [[ "$token" = "$item" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+### args:after TOKEN ARGS ... Usage:bbuild
+#
+# Return all tokens after TOKEN via the RETARR_ARGSAFTER
+#
+#    myargs=(one two -- three "four and" five)
+# 	args:after -- "${myargs[@]}"
+#
+# 	for a in "${RETARR_ARGSAFTER}"; do
+# 		echo "$a"
+# 	done
+#
+# The above prints
+#
+# 	three
+# 	four and
+# 	five
+#
+###/doc
+
+args:after() {
+    local token="$1"; shift || :
+    
+    local current_token="$1"; shift || :
+    while [[ "$#" -gt 0 ]] && [[ "$current_token" != "$token" ]]; do
+        current_token="$1"; shift || :
+    done
+
+    RETARR_ARGSAFTER=("$@")
+}
+
+### args:use ARGNAMES ... -- ARGVALUES ... Usage:bbuild
+# 
+# Consume arguments into named global variables.
+#
+# If not enough argument values are found, the first named variable that failed to be assigned is printed as error
+#
+# Example:
+#
+#   #%include out.sh
+#   #%include args.sh
+#
+#   get_parameters() {
+#       . <(args:use INFILE OUTFILE -- "$@")
+#
+#       [[ -f "$INFILE" ]]  || out:fail "Input file '$INFILE' does not exist"
+#       [[ -f "$OUTFILE" ]] || out:fail "Output file '$OUTFILE' does not exist"
+#   }
+#
+#   main() {
+#       get_parameters "$@"
+#
+#       echo "$INFILE will be converted to $OUTFILE"
+#   }
+#
+#   main "$@"
+#
+###/doc
+args:use() {
+    local argname arglist # TODO - consume meta args
+    arglist=(:)
+    for argname in "$@"; do
+        [[ "$argname" != -- ]] || break
+        [[ "$argname" =~ ^[0-9a-zA-Z_]+$ ]] || out:fail "Internal: Not a valid argument name '$argname'"
+
+        arglist+=("$argname")
+    done
+
+    for argname in "${arglist[@]:1}"; do
+        echo "$ARGSLIB_scope $argname=\"\${1:-}\"; shift || out:fail \"Internal : could not get '$argname'\""
+    done
+}
+
+
+### args:use:local ARGNAMES ... -- ARGVALUES ... Usage:bbuild
+# 
+# Consume arguments into named variables. You need to use process subtitution and sourcing
+#   to call the function, so that it affects the scope in your function.
+#
+# If not enough argument values are found, the named variable that failed to be assigned is printed as error
+#
+# Example:
+#
+#   #%include out.sh
+#   #%include args.sh
+#
+#   person() {
+#       . <(args:use:local name email -- "$@")
+#
+#       echo "$name <$email>"
+#
+#       # $1 and $2 have been consumed into $name and $email
+#       # The rest remains available in $* :
+#       
+#       echo "Additional notes: $*"
+#   }
+#
+#   person "Jo Smith" "jsmith@exam0ple.com" Some details
+#
+###/doc
+args:use:local() {
+    ARGSLIB_scope=local args:use "$@"
+}
+
+### Debug lib Usage:bbuild
+#
+# Debugging tools and functions.
+#
+# You need to activate debug mode using debug:activate command at the start of your script
+#  (or from whatever point you wish it to activate)
+#
+###/doc
+
+### Environment Variables Usage:bbuild
+#
+# DEBUG_mode : set to 'true' to enable debugging output
+#
+###/doc
+
+: ${DEBUG_mode=false}
+
+### debug:mode [output | /output | verbose | /verbose] ... Usage:bbuild
+#
+# Activate debug output (`output`), or activate command tracing (`verbose`)
+#
+# Deactivate with the corresponding `/output` and `/verbose` options
+#
+###/doc
+
+function debug:mode() {
+    local mode_switch
+    for mode_switch in "$@"; do
+        case "$mode_switch" in
+        output)
+            DEBUG_mode=true ;;
+        /output)
+            DEBUG_mode=false ;;
+        verbose)
+            set -x ;;
+        /verbose)
+            set +x ;;
+        esac
+    done
+}
+
+### debug:print MESSAGE Usage:bbuild
+# print a blue debug message to stderr
+# only prints if DEBUG_mode is set to "true"
+###/doc
+function debug:print {
+    [[ "$DEBUG_mode" = true ]] || return 0
+    echo "${CBBLU}DEBUG: $CBLU$*$CDEF" 1>&2
+}
+
+### debug:dump [MARKER] Usage:bbuild
+#
+# Pipe the data coming through stdin to stdout (as if it weren't there at all)
+#
+# If debug mode is on, *also* write the same data to stderr, each line preceded by MARKER
+#
+# Insert this function into pipes to see their output when in debugging mode
+#
+#   sed -r 's/linux|unix/*NIX/gi' myfile.txt | debug:dump | lprint
+#
+# Or use this to mask a command's output unless in debug mode
+#
+#   which binary 2>&1 | debug:dump >/dev/null
+#
+###/doc
+function debug:dump {
+    if [[ "$DEBUG_mode" = true ]]; then
+        local MARKER="${1:-DEBUG: }"; shift || :
+
+        cat - | sed -r "s/^/$MARKER/" | tee -a /dev/stderr
+    else
+        cat -
+    fi
+}
+
+### debug:break MESSAGE Usage:bbuild
 #
 # Add break points to a script
 #
-# Requires MODE_DEBUG set to true
+# Requires `DEBUG_mode` set to true
 #
 # When the script runs, the message is printed with a propmt, and execution pauses.
 #
@@ -431,23 +799,23 @@ function out:dump {
 #
 ###/doc
 
-function out:break {
-	[[ "$MODE_DEBUG" = true ]] || return 0
+function debug:break {
+    [[ "$DEBUG_mode" = true ]] || return 0
 
-	echo -en "${CRED}BREAKPOINT: $* >$CDEF " >&2
-	read
-	if [[ "$REPLY" =~ quit|exit|stop ]]; then
-		out:fail "ABORT"
-	fi
+    echo -en "${CRED}BREAKPOINT: $* >$CDEF " >&2
+    read
+    if [[ "$REPLY" =~ quit|exit|stop ]]; then
+        echo "${CBRED}ABORT${CDEF}"
+    fi
 }
+##bash-libs: includefile2.sh @ %COMMITHASH%
 
-if [[ "$MODE_DEBUG_VERBOSE" = true ]]; then
-	set -x
-fi
 ### File Inclusion Usage:bbuild
 # Library for including (once) or inserting (any time called) external files ontents
 # based on developer-defined tokens
 ##/doc
+
+##bash-libs: searchpaths.sh @ %COMMITHASH%
 
 
 # FIXME - set function signature in head of help
@@ -461,7 +829,7 @@ fi
 #  in order of preference of a local lib directory, a profile-wide one, then a system-
 #  wide one.
 #
-#	MYPATH="./lib:$HOME/.local/lib:/usr/local/lib"
+#    MYPATH="./lib:$HOME/.local/lib:/usr/local/lib"
 # 	searchpaths:file_from "$MYPATH" file
 #
 # Echoes the path of the first file found.
@@ -471,26 +839,21 @@ fi
 ###/doc
 
 function searchpaths:file_from {
-	local PATHS="$1"; shift || :
-	local FILE="$1"; shift || :
+    local PATHS="$1"; shift || :
+    local FILE="$1"; shift || :
 
-	out:debug "Looking for file [$FILE] amongst [$PATHS]"
-
-	for path in $(echo "$PATHS"|tr ':' ' '); do
-		out:debug "Try path: $path"
-		local fpath="$path/$FILE"
-		if [[ -f "$fpath" ]]; then
-			echo "$fpath"
-			return 0
-		else
-			out:debug "No $fpath"
-		fi
-	done
-	return 1
+    for path in $(echo "$PATHS"|tr ':' ' '); do
+        local fpath="$path/$FILE"
+        if [[ -f "$fpath" ]]; then
+            echo "$fpath"
+            return 0
+        fi
+    done
+    return 1
 }
 
 includefile:reset_tracker() {
-	INCLUDEFILE_tracker=""
+    INCLUDEFILE_tracker=""
 }
 
 ### includefile:process TARGET Usage:bbuild
@@ -503,30 +866,28 @@ includefile:reset_tracker() {
 # set INCLUDEFILE_paths colon-delimited string to a search pth from which to find scripts to source
 ###/doc
 includefile:process() {
-	local target
-	local workfile
-	local dumpfile
-	target="$1"; shift
-	workfile="$(mktemp ./._include-XXXX)"
-	dumpfile="$(mktemp ./._include-d-XXXX)"
+    local target
+    local workfile
+    local dumpfile
+    target="$1"; shift
+    workfile="$(mktemp ./._include-XXXX)"
+    dumpfile="$(mktemp ./._include-d-XXXX)"
 
-	trap "includefile:cleanup" SIGINT EXIT
+    trap "includefile:cleanup" SIGINT EXIT
 
-	: ${INCLUDEFILE_paths=./}
-	: ${INCLUDEFILE_token=@include}
+    : ${INCLUDEFILE_paths=./}
+    : ${INCLUDEFILE_token=@include}
 
-	includefile:reset_tracker
-	
-	cat "$target" > "$workfile"
-	
-	while includefile:_has_inclusion_line "$workfile"; do
-		includefile:_process_first_inclusion "$workfile" > "$dumpfile"
-		cat "$dumpfile" > "$workfile"
-	done
+    includefile:reset_tracker
+    
+    cat "$target" > "$workfile"
+    
+    while includefile:_has_inclusion_line "$workfile"; do
+        includefile:_process_first_inclusion "$workfile" > "$dumpfile" || return 1
+        cat "$dumpfile" > "$workfile"
+    done
 
-	cat "$workfile"
-
-	#rm "$workfile" "$dumpfile"
+    cat "$workfile"
 }
 
 ### includefile:_process_first_inclusion TARGET Usage:internal
@@ -536,68 +897,67 @@ includefile:process() {
 # returns 1 on issues with inclusions
 ###/doc
 includefile:_process_first_inclusion() {
-	local fd_target="$1"; shift
-	local target="$(mktemp)"
-	cat "$fd_target" > "$target"
+    local fd_target="$1"; shift
+    local target="$(mktemp)"
+    cat "$fd_target" > "$target"
 
-	local pos=$(includefile:_get_inclusion_line_pos "$target")
-	local inctokens=($(includefile:_get_inclusion_line_string "$target"))
+    local pos=$(includefile:_get_inclusion_line_pos "$target")
+    local inctokens=($(includefile:_get_inclusion_line_string "$target"))
 
-	head -n $((pos - 1)) "$target"
-	includefile:_cat_once "${inctokens[@]:1}" || return 1
-	tail -n +$((pos + 1)) "$target"
+    head -n $((pos - 1)) "$target"
+    includefile:_cat_once "${inctokens[@]:1}" || return 1
+    tail -n +$((pos + 1)) "$target"
 
-	rm "$target"
+    rm "$target"
 
-	return 0
+    return 0
 }
 
 includefile:_get_inclusion_line_pos() {
-	local targetfile="$1"; shift
+    local targetfile="$1"; shift
 
-	grep -nP "^$INCLUDEFILE_token" "$targetfile" | head -n 1 | cut -d: -f1
+    grep -nP "^$INCLUDEFILE_token" "$targetfile" | head -n 1 | cut -d: -f1
 }
 
 includefile:_get_inclusion_line_string() {
-	local targetfile="$1"; shift
+    local targetfile="$1"; shift
 
-	grep -P "^$INCLUDEFILE_token" "$targetfile" | head -n 1 
+    grep -P "^$INCLUDEFILE_token" "$targetfile" | head -n 1 
 }
 
 includefile:_has_inclusion_line() {
-	local targetfile="$1"; shift
+    local targetfile="$1"; shift
 
-	grep -qP "^$INCLUDEFILE_token" "$targetfile"
+    grep -qP "^$INCLUDEFILE_token" "$targetfile"
 }
 
 includefile:_cat_once() {
-	local item
-	local fullpath
-	local b64t
-	for item in "$@"; do
-		[[ -n "$item" ]] || continue
+    local item
+    local fullpath
+    local b64t
+    for item in "$@"; do
+        [[ -n "$item" ]] || continue
 
-		fullpath="$(searchpaths:file_from "$INCLUDEFILE_paths" "$item")" || out:fail "Error including '$item'"
-		if [[ -z "$fullpath" ]]; then
-			return 1
-		fi
-		
-		out:debug "$item => $fullpath"
-		b64t=";$(echo "$fullpath" | base64 -w 0);"
-		if [[  "$INCLUDEFILE_tracker" =~ "$b64t" ]]; then
-			out:debug "\033[33;1m    Skip re-inclusion of [$item] (is in '$INCLUDEFILE_tracker')"
-			continue
-		fi
+        fullpath="$(searchpaths:file_from "$INCLUDEFILE_paths" "$item")"
+        if [[ -z "$fullpath" ]]; then
+            INCLUDEFILE_failed="$item"
+            return 1
+        fi
+        
+        b64t=";$(echo "$fullpath" | base64 -w 0);"
+        if [[  "$INCLUDEFILE_tracker" =~ "$b64t" ]]; then
+            continue
+        fi
 
-		export INCLUDEFILE_tracker="$INCLUDEFILE_tracker $b64t"
-		cat "$fullpath"
-	done
+        export INCLUDEFILE_tracker="$INCLUDEFILE_tracker $b64t"
+        cat "$fullpath"
+    done
 }
 
 includefile:cleanup() {
-	rm ./._include-*
+    rm ./._include-*
 }
-#!/bin/bash
+##bash-libs: bincheck.sh @ %COMMITHASH%
 
 ### bincheck:get COMMANDS ... Usage:bbuild
 #
@@ -618,18 +978,18 @@ includefile:cleanup() {
 ###/doc
 
 bincheck:get() {
-	local BINEXE=
-	for binname in "$@"; do
-		# Some implementations of `which` print error messages
-		# Not useful here.
-		BINEXE=$(which "$binname" 2>/dev/null)
+    local BINEXE=
+    for binname in "$@"; do
+        # Some implementations of `which` print error messages
+        # Not useful here.
+        BINEXE=$(which "$binname" 2>/dev/null)
 
-		if [[ -n "$BINEXE" ]]; then
-			echo "$BINEXE"
-			return 0
-		fi
-	done
-	return 1
+        if [[ -n "$BINEXE" ]]; then
+            echo "$BINEXE"
+            return 0
+        fi
+    done
+    return 1
 }
 
 ### bincheck:has NAMES ... Usage:bbuild
@@ -639,7 +999,7 @@ bincheck:get() {
 ###/doc
 
 bincheck:has() {
-	[[ -n "$(bincheck:get "$@")" ]]
+    [[ -n "$(bincheck:get "$@")" ]]
 }
 
 ### bincheck:path NAME Usage:bbuild
@@ -651,179 +1011,305 @@ bincheck:has() {
 ###/doc
 
 bincheck:path() {
-	local binname="$1"; shift || :
+    local binname="$1"; shift || :
 
-	[[ "$binname" =~ / ]] && { 
-		# A relative path cannot be resolved, just check existence
-		[[ -e "$binname" ]] && echo "$binname" || return 1
+    [[ "$binname" =~ / ]] && { 
+        # A relative path cannot be resolved, just check existence
+        [[ -e "$binname" ]] && echo "$binname" || return 1
 
-	} || binname="$(which "$binname" 2>/dev/null)"
+    } || binname="$(which "$binname" 2>/dev/null)"
 
-	# `which` failed
-	[[ -n "$binname" ]] || return 1
+    # `which` failed
+    [[ -n "$binname" ]] || return 1
 
-	[[ -h "$binname" ]] && {
+    [[ -h "$binname" ]] && {
 
-		local pointedname="$(ls -l "$binname"|grep -oP "$binname.+"|sed "s|$binname -> ||")"
-		bincheck:path "$pointedname" ; return "$?"
+        local pointedname="$(ls -l "$binname"|grep -oP "$binname.+"|sed "s|$binname -> ||")"
+        bincheck:path "$pointedname" ; return "$?"
+    
+    } || echo "$binname"
+}
+### Syntax Post-processing Usage:help
+#
+# Bash Builder adds some post-processing to built files
+# as an option, to allow some extra features.
+#
+# You can opt to switch on all syntax post-processing
+# subfeatures ("syntax extensions"), or individual ones
+#
+###/doc
+
+# TODO - there are several array-related shortcuts to add
+# * transparent handling of serialization
+#   * though this may be rendered less relevant with strict mode
+# * associative arrays
+
+bbuild:syntax_post() {
+	# Syntax post-processor
+	local target="${1:-}"; shift || :
 	
-	} || echo "$binname"
+	bbuild:syntax:expand_local "$target"
+	bbuild:syntax:expand_arg1 "$target"
+    bbuild:syntax:expand_function_signatures "$target"
 }
 
+bbuild:syntax:use() {
+    [[ -n "${BBSYNTAX[*]}" ]] &&
+        [[ "$BBSYNTAX" =~ syntax ]] ||
+        [[ "$BBSYNTAX" =~ "$1" ]]
+}
+
+### expandarg1 Usage:bbuild
+#
+# An option which allows safe assignment of the first argument, and
+# forces a shift. The shift itself may error, allowing it to be caught.
+#
+# 	You write ==>   ="${1:-}"; shift 
+#
+# 	You get   ==>   ="${1:-}"; shift
+#
+# 	Example :
+#
+# 		myfunc() {
+# 			person="${1:-}"; shift || out:fail "person not specified"
+# 			message="${1:-}"; shift || out:fail "message not specified"
+#
+# 			echo "Hello $person : $message"
+# 		}
+#
+##/doc
+bbuild:syntax:expand_arg1() {
+	bbuild:syntax:use expandarg1 || return 0
+	# adjacent quotes prevent this code from mangling itself
+	sed -r 's/=\$''%1\s*/="${1:-}"; shift /g' -i "$1"
+}
+
+### expandlocal Usage:bbuild
+#
+# An option which allows quickly defining a local variable
+#
+# 	You write ===>   $%myvar=
+#
+# 	You get   ===>   local myvar=
+#
+# 	Example:
+#
+# 	    myfunc() {
+# 	        # declare a local variable person
+# 	        $%person="$1"
+#
+# 	        echo "Hello $person"
+# 	    }
+###/doc
+bbuild:syntax:expand_local() {
+	bbuild:syntax:use expandlocal || return 0
+	sed -r 's/^(\s*)\$''%([a-zA-Z0-9_]+)=/\1local \2=/g' -i "$1"
+}
+
+### expandfsig Usage:bbuild
+#
+# An option to use a function's signature to declare local variables
+#
+# NOTE: function names must match the following regex:
+#   ^[a-zA-Z0-9_:.-]+$
+#
+# 	You write ===>   $%function functionname(var1 var2 var3) {
+#
+# 	You get   ===>   functionname() { . <(args:use:local var1 var2 var3 -- "$@") ;
+#
+# 	Example:
+#
+# 	    $%myfunc(firstname lastname) {
+# 	        echo "Hello $lastname, $firstname - you have a new message!"
+# 	        echo "$*"
+# 	    }
+###/doc
+bbuild:syntax:expand_function_signatures() {
+	bbuild:syntax:use expandfsig || return 0
+    sed -r 's/^(\s*)\$''%function\s*([a-zA-Z0-9_:.-]+)\(([^)]+?)\)\s+\{''/''\1\2() {\n\1    . <(args:use:local \3 -- "$@") ; ''/' -i "$1"
+}
+
+###### +++++++++++++++++++++++++++
+
+### Example and test
+# Direct test
+#   (
+#       . src/syntax.sh
+#       bbuild test-syntax.sh
+#       BBSYNTAX=syntax bbuild:syntax_post build-outd/test-syntax.sh # This will eventually integrate to bbuild itself
+#       build-outd/test-syntax.sh Alice Bob "extra data"
+#   )
+
+# Test data in "test-syntax.sh" :
+
+###%include args.sh
+##
+##$%function sayhello(name1 name2) {
+##	$%myvar="${1:-}"; shift 
+##
+##	echo "Hello $name1 and $name2, myvar is $myvar"
+##}
+##
+##sayhello "$@"
 
 setup_build_dir() {
-	mkdir -p "$BUILDOUTD" || out:fail "Cannot create the output directory !"
+    mkdir -p "$BUILDOUTD" || out:fail "Cannot create the output directory !"
 }
 
 load_project_environment() {
     # preventer is not true || or if it is, bail
     [[ "${NO_LOAD_BBUILDRC:-}" != true ]] || return 0
 
-	if [[ -f  "$BBUILD_ENV_FILE" ]]; then
-		. "$BBUILD_ENV_FILE" || out:fail "Error during inclusion of environment file."
-	fi
+    if [[ -f  "$BBUILD_ENV_FILE" ]]; then
+        . "$BBUILD_ENV_FILE" || out:fail "Error during inclusion of environment file."
+    fi
 }
 
 # checktags { FILENAME | TAG SPEC }
 checktags() {
-	if [[ -z "${1:-}" ]]; then return; fi
+    if [[ -z "${1:-}" ]]; then return; fi
 
-	if [[ "${IGNORETAGS:-}" = unsafe ]]; then
-		return
-	fi
+    if [[ "${IGNORETAGS:-}" = unsafe ]]; then
+        return
+    fi
 
-	local tagsname="#%bbtags"
-	if [[ "$1" != "$tagsname" ]]; then
-		checktags $(grep "^$tagsname" "$1")
-		return
-	fi
+    local tagsname="#%bbtags"
+    if [[ "$1" != "$tagsname" ]]; then
+        checktags $(grep "^$tagsname" "$1")
+        return
+    fi
 
-	shift; # first arg is the bbtag
-	
-	for tag in "$@"; do
-		case "$tag" in
-			i:*)
-				out:info "TAGS: $tag"
-				;;
-			w:*)
-				out:warn "TAGS: $tag"
-				;;
-			e:*)
-				out:fail "TAGS: $tag"
-				;;
-			*)	
-				out:debug "TAGS: $tag"
-				;;
-		esac
-	done
+    shift; # first arg is the bbtag
+    
+    for tag in "$@"; do
+        case "$tag" in
+            i:*)
+                out:info "TAGS: $tag"
+                ;;
+            w:*)
+                out:warn "TAGS: $tag"
+                ;;
+            e:*)
+                out:fail "TAGS: $tag"
+                ;;
+            *)	
+                debug:print "TAGS: $tag"
+                ;;
+        esac
+    done
 }
 
 build_script() {
-	local infile="$1"; shift
-	local t_BBPATH="$(dirname "$infile"):$BBPATH"
+    . <(args:use:local infile -- "$@") ; 
+    local t_BBPATH="$(dirname "$infile"):$BBPATH"
 
-	local fname="$(basename "$infile")"
-	local tfile="$BUILDOUTD/$fname"
+    local tfname="$(basename "$infile")"
+    local tfile="$BUILDOUTD/$tfname"
 
-	out:info "Building $infile to $tfile"
+    out:info "Building $infile to $tfile"
 
-	INCLUDEFILE_token="#%include"
-	INCLUDEFILE_paths="$t_BBPATH"
+    INCLUDEFILE_token="#%include"
+    INCLUDEFILE_paths="$t_BBPATH"
 
-	includefile:process "$infile" > "$tfile" || out:fail "Inclusion on $tfile failed."
+    includefile:process "$infile" > "$tfile" || out:fail "Inclusion on $tfile failed : [${INCLUDEFILE_failed:-}]"
 
-	do_shellcheck "$tfile"
-	checktags "$tfile"
-	chmod 755 "$tfile"
+    bbuild:syntax_post "$tfile" || out:fail "Syntax post-processing on $tfile failed"
+
+    do_shellcheck "$tfile"
+    checktags "$tfile"
+    chmod 755 "$tfile"
 }
 
 do_shellcheck() {
-	if [[ "$SHELLCHECK" = true ]]; then
-		if bincheck:has shellcheck ; then
-			shellcheck -s bash "$1"
-		else
-			out:warn "You need to install shellcheck to perform syntax check"
-			SHELLCHECK=false
-		fi
-	fi
+    if [[ "$SHELLCHECK" = true ]]; then
+        if bincheck:has shellcheck ; then
+            shellcheck -s bash "$1"
+        else
+            out:warn "You need to install shellcheck to perform syntax check"
+            SHELLCHECK=false
+        fi
+    fi
 }
 
 arg_valueof() {
-	echo "${1#*=}"
+    echo "${1#*=}"
 }
 
 parse_flag() {
-	case "$1" in
-	-C|--no-check)
-		SHELLCHECK=false
-		;;
-	-c|--check)
-		SHELLCHECK=true
-		;;
-	--out=*)
-		BUILDOUTD="$(arg_valueof "$1")"
-		;;
-	--ignore-tags)
-		IGNORETAGS=unsafe
-		;;
-	--release)
-		DOSETRELEASE=true
-		;;
-	*)
-		out:fail "Unknown argument $1"
-		;;
-	esac
+    case "$1" in
+    -C|--no-check)
+        SHELLCHECK=false
+        ;;
+    -c|--check)
+        SHELLCHECK=true
+        ;;
+    --out=*)
+        BUILDOUTD="$(arg_valueof "$1")"
+        ;;
+    --ignore-tags)
+        IGNORETAGS=unsafe
+        ;;
+    --release)
+        DOSETRELEASE=true
+        ;;
+    *)
+        out:fail "Unknown argument $1"
+        ;;
+    esac
 }
 
 build_files_list() {
-	for arg in "$@"; do
-		if [[ -f "$arg" ]]; then
-			out:debug "File ${#prompt_file_list[@]} for processing: $arg"
-			prompt_file_list[${#prompt_file_list[@]}]="$arg"
+    for arg in "$@"; do
+        if [[ -f "$arg" ]]; then
+            debug:print "File ${#prompt_file_list[@]} for processing: $arg"
+            prompt_file_list[${#prompt_file_list[@]}]="$arg"
 
-		elif [[ "$arg" =~ ^- ]]; then
-			parse_flag "$arg"
+        elif [[ "$arg" =~ ^- ]]; then
+            parse_flag "$arg"
 
-		else
-			out:fail "No such file $arg"
-		fi
-	done
+        else
+            out:fail "No such file $arg"
+        fi
+    done
 }
 
 main() {
-	autohelp:check "$@"
+    autohelp:check "$@"
 
-	BBUILD_ENV_FILE=./bbuildrc
+    BBUILD_ENV_FILE=./bbuildrc
 
-	# --- Defaults
-	: ${BBPATH=./}
-	: ${BUILDOUTD=./build-outd}
-	: ${SHELLCHECK=false}
+    # --- Defaults
+    : ${BBPATH=./}
+    : ${BUILDOUTD=./build-outd}
+    : ${SHELLCHECK=false}
 
-	# --- Settings file
-	load_project_environment
+    # --- Settings file
+    load_project_environment
 
-	# --- Command line
-	build_files_list "$@"
+    # --- Command line
+    build_files_list "$@"
 
-	# ++++++++++++++++
-	# Now we process.
+    # ++++++++++++++++
+    # Now we process.
 
-	setup_build_dir
+    setup_build_dir
 
-	# BBFILES can be specified externally
-	# command line overrides this IFF specified
-	if [[ "${#prompt_file_list[@]}" -gt 0 ]]; then
-		out:debug "Prompt files list is ${prompt_file_list[*]}"
-		BBFILES=("${prompt_file_list[@]}")
-	fi
-	
-	out:debug "And so, processing ${BBFILES[*]}"
+    # BBFILES can be specified externally
+    # command line overrides this IFF specified
+    if [[ "${#prompt_file_list[@]}" -gt 0 ]]; then
+        debug:print "Prompt files list is ${prompt_file_list[*]}"
+        BBFILES=("${prompt_file_list[@]}")
+    fi
 
+    if [[ -z "${BBFILES[*]}" ]]; then
+        out:fail "No files to compile -- use a ./bbuildrc file to specify defaults (formerly bbuild_env)"
+    fi
+    
+    debug:print "And so, processing ${BBFILES[*]}"
 
-	for infile in "${BBFILES[@]}"; do
-		build_script "$infile"
-	done
+    for infile in "${BBFILES[@]}"; do
+        build_script "$infile"
+    done
 }
 
-runmain bootstrap-bbuild5 main "$@"
+main "$@"
