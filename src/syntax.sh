@@ -1,59 +1,53 @@
-### Syntax Post-processing Usage:help
+
+### Syntax Post-processing Usage:syntax
 #
 # Bash Builder adds some post-processing to built files
-# as an option, to allow some extra features.
+# to allow some extra features.
 #
-# You can opt to switch on all syntax post-processing
-# subfeatures ("syntax extensions"), or individual ones
+# It is active by default ; you can set an environment variable
+# `BBSYNTAX=off` to prevent it from activating.
 #
 ###/doc
 
 # TODO - there are several array-related shortcuts to add
 # * transparent handling of serialization
 #   * though this may be rendered less relevant with strict mode
-# * associative arrays
 
 bbuild:syntax_post() {
-	# Syntax post-processor
+    [[ "${BBSYNTAX:-}" != off ]] || return 0
+
 	local target="${1:-}"; shift || :
 	
+    bbuild:syntax:expand_function_signatures "$target"
 	bbuild:syntax:expand_local "$target"
 	bbuild:syntax:expand_arg1 "$target"
-    bbuild:syntax:expand_function_signatures "$target"
 }
 
-bbuild:syntax:use() {
-    [[ -n "${BBSYNTAX[*]}" ]] &&
-        [[ "$BBSYNTAX" =~ syntax ]] ||
-        [[ "$BBSYNTAX" =~ "$1" ]]
-}
-
-### expandarg1 Usage:bbuild
+### Arg1 expansion Usage:syntax
 #
 # An option which allows safe assignment of the first argument, and
-# forces a shift. The shift itself may error, allowing it to be caught.
+# forces a shift. If the shift errors (no value to consume), an error is generated
 #
-# 	You write ==>   =$%1
+# 	You write ==>   varname=$%1
 #
-# 	You get   ==>   ="${1:-}"; shift
+# 	You get   ==>   varname="${1:-}"; shift || (out:fail "Internal Error: Expected 'varname' argument in function")
 #
 # 	Example :
 #
 # 		myfunc() {
-# 			person=$%1  || out:fail "person not specified"
-# 			message=$%1 || out:fail "message not specified"
+# 			person=$%1
+# 			message=$%1
 #
 # 			echo "Hello $person : $message"
 # 		}
 #
 ##/doc
 bbuild:syntax:expand_arg1() {
-	bbuild:syntax:use expandarg1 || return 0
 	# adjacent quotes prevent this code from mangling itself
-	sed -r 's/=\$''%1\s*/="${1:-}"; shift /g' -i "$1"
+	sed -r 's/([a-zA-Z0-9_]+)=\$''%1\s*/\1="${1:-}"; shift || (out:fail "(internal) Expected \"\1\" argument in function") /g' -i "$1"
 }
 
-### expandlocal Usage:bbuild
+### Shorthand `local` keyword Usage:syntax
 #
 # An option which allows quickly defining a local variable
 #
@@ -71,13 +65,13 @@ bbuild:syntax:expand_arg1() {
 # 	    }
 ###/doc
 bbuild:syntax:expand_local() {
-	bbuild:syntax:use expandlocal || return 0
 	sed -r 's/^(\s*)\$''%([a-zA-Z0-9_]+)=/\1local \2=/g' -i "$1"
 }
 
-### expandfsig Usage:bbuild
+### Function signature expansion Usage:syntax
 #
-# An option to use a function's signature to declare local variables
+# An option to use a function's signature to declare local variables.
+# Requires your script to include `args.sh`
 #
 # NOTE: function names must match the following regex:
 #   ^[a-zA-Z0-9_:.-]+$
@@ -94,29 +88,64 @@ bbuild:syntax:expand_local() {
 # 	    }
 ###/doc
 bbuild:syntax:expand_function_signatures() {
-	bbuild:syntax:use expandfsig || return 0
     sed -r 's/^(\s*)\$''%function\s*([a-zA-Z0-9_:.-]+)\(([^)]+?)\)\s+\{''/''\1\2() {\n\1    . <(args:use:local \3 -- "$@") ; ''/' -i "$1"
 }
 
-###### +++++++++++++++++++++++++++
+### Dot notation for associative arrays Usage:syntax
+#
+# Access a data map array via dot notation:
+#
+# Dot notation is identified by use of `$%.`
+#
+# Assignment is done by using an `=` sign immediately after the dot notation
+#
+#   $%.object.property1=value
+#   $%.object.property2=stuff
+#
+# Value printing is done by not including an equality sign
+#
+#   echo "$%.object.property1"
+#
+# An iterable series of values can be printed using `@` notation
+#
+#   process_values "$%.object[@]"
+#
+# The values themselves, on one line, can be printed using `*` notation
+#
+#   echo "$%.object[*]"
+#
+###/doc
+bbuild:syntax:dot_arrays() {
+    local transforms
+    transforms=(
+        # $%.object.property= --> $object['property']=
+        -e 's/\$%\.([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)=/\1['"'"'\2'"'"']=/g'
 
-### Example and test
-# Direct test
-#   (
-#       . src/syntax.sh
-#       bbuild test-syntax.sh
-#       BBSYNTAX=syntax bbuild:syntax_post build-outd/test-syntax.sh # This will eventually integrate to bbuild itself
-#       build-outd/test-syntax.sh Alice Bob "extra data"
-#   )
+        # $%.object.property --> ${object[property]}
+        -e 's/\$%\.([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)/${\1[\2]}/g'
 
-# Test data in "test-syntax.sh" :
+        # $%.object[!] --> ${!object[@]}
+        -e 's/\$%\.([a-zA-Z0-9_]+)\[\!\]/${!\1[@]}/g'
 
-###%include args.sh
-##
-##$%function sayhello(name1 name2) {
-##	$%myvar=$%1
-##
-##	echo "Hello $name1 and $name2, myvar is $myvar"
-##}
-##
-##sayhello "$@"
+        # $%.object[@] --> ${object[@]}
+        -e 's/\$%\.([a-zA-Z0-9_]+)\[@\]/${\1[@]}/g'
+
+        # $%.object[*] --> ${object[*]}
+        -e 's/\$%\.([a-zA-Z0-9_]+)\[\*\]/${\1[*]}/g'
+
+        # $%.object[<some variable or string>] --> ${object[<the same>]}
+        -e 's/\$%\.([a-zA-Z0-9_]+)\[([^]]+)\]/${\1[\2]}/g'
+
+        # local $%.object --> declare -A object
+        -e 's/local\s+\$%\.([a-zA-Z0-9_]+)/declare -A \1/g'
+
+        # $%.object --> declare -Ag object
+        -e 's/\$%\.([a-zA-Z0-9_]+)/declare -Ag \1/g'
+    )
+
+    sed -r "${transforms[@]}" -i "$1"
+
+    if grep "\$%\." "$1" ; then
+        out:fail "--- Some dot-array syntax did not convert ---"
+    fi
+}

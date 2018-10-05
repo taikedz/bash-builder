@@ -74,6 +74,15 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 #   This allows simply running "bbuild" to build specified project scripts
 #
 # 	BBFILES=(src/script1 src/script2 libs/support_script)
+# 
+#
+# Syntax post-processing
+# ----------------------
+#
+# Bash Builder 5.2+ provides a post-processing utiltiy enabling extra syntax macros that
+# can help write easier-to-maintain code.
+#
+# Run bbuild `--help syntax` for more information
 #
 ###/doc
 
@@ -206,6 +215,10 @@ build_files_list() {
 }
 
 main() {
+    if [[ "$*" =~ "--help syntax" ]]; then
+        autohelp:print syntax
+        exit 0
+    fi
     autohelp:check "$@"
 
     BBUILD_ENV_FILE=./bbuildrc

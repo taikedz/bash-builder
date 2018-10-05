@@ -69,11 +69,9 @@ See `bbuild --help` for more information.
 
 #### Syntax post-processor
 
-A syntactic post-processor is implemented as of 5.3 !
+A syntactic post-processor is implemented as of 5.3, which seeks and replaces special strings starting with `$%`
 
-It's quite basic, but will expand in feature set over time, to overcome some of the more limiting facets of bash programming
-
-Of note for now:
+Specify `BBSYNTAX=off` in your `bashrc` file to disable syntax post-processing.
 
 **Function signatures**
 
@@ -100,19 +98,40 @@ You can also explicitly consume arguments in a less verbose way, when using stri
 set -eu
 
 myfunc() {
-    local arg="${1:-}"; shift || out:fail "First argument not specified"
+    local arg="${1:-}"; shift || out:fail "Argument 'arg' not specified"
 }
 ```
 
-you can now simyply write the following to take care of the verbose section
+you can now simply write the following to take care of the verbose section, and get an informative failure error naming the variable that could not be filled.
 
 ```sh
 set -eu
 
 myfunc() {
-    $%arg=$%1 || out:fail "First argument not specified"
+    local arg=$%1
 }
 ```
+
+**Associative Array Dot Notation**
+
+Bash has some rudimentary support for associative arrays ; however it is fairly lax about the strings it accepts as "keys" and somewhat inconsistent with the rest of the array/variables syntax.
+
+The following notation thus is supported, limiting variables and "keys" to alphanumerical characters only. On the left, the `$%.` notation ; on the right, the resulting post-processing.
+
+    # Always needs declaring                              # Always needs declaring
+    $%.object                                    |        declare -Ag object
+
+    # Assign a property                                   # Assign a property
+    $%.object.property1=value                    |        object['property1']=value
+    $%.object.property2=stuff                    |        object['property2']=stuff
+
+    # Iterate over keys to get values                     # Iterate over keys to get values
+
+    for x in "$%.object[!]"; do                  |        for x in "${!object[@]}"; do
+        echo "$x --> $%.object[$x]"              |                echo "$x --> ${object[$x]}"
+    done                                                  done
+
+
 
 ### `bashdoc`
 

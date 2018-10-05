@@ -152,7 +152,7 @@ run_build() {
 
     BUILDFILES=(src/bashdoc src/bbuild src/tarshc)
 
-    NO_LOAD_BBUILDRC=true BBSYNTAX=syntax bash "${BBEXEC}" "${BUILDFILES[@]}" || exit 1
+    NO_LOAD_BBUILDRC=true bash "${BBEXEC}" "${BUILDFILES[@]}" || exit 1
 }
 
 install_files() {
