@@ -40,11 +40,18 @@ Options:
     Clear existing files from the destination library dir (~/.local/lib/bbuild or /usr/local/lib/bbuild)
         before installing the new files
 
+--compatible-bbpath
+    Newer versions of Bash Libs will install to \$libs/bb instead of directly to \$libs
+    This will mean inclusions need to be re-written from '#%include out.sh' to '#%include bb/out.sh'
+    Use this option to add 'bb/' directly to BBPATH for new installations.
+    For existing installations, edit ~/.bashrc or /etc/bash.bashrc as required
+
 EOHELP
 }
 
 parse_args() {
     local arg
+    ADD_SUB_BBPATH=false
 
     for arg in "$@"; do
         case "$arg" in
@@ -67,6 +74,9 @@ parse_args() {
             ;;
         --clear-libs)
             CLEAR_LIBS=true
+            ;;
+        --compatible-bbpath)
+            ADD_SUB_BBPATH=true
             ;;
         verify)
             # Perform the verification task
@@ -125,8 +135,13 @@ environment_configuration() {
         echo "export PATH=\$PATH:$binsd" >> "$BASHRCPATH"
     fi
 
+    local targets="$libs"
+    if [[ "${ADD_SUB_BBPATH:-}" ]]; then
+        targets="$targets:$libs/bb"
+    fi
+
     if ! grep "BBPATH=" "$BASHRCPATH" -q; then
-        echo "export BBPATH=\"$libs\"" >> "$BASHRCPATH"
+        echo "export BBPATH=\"$targets\"" >> "$BASHRCPATH"
     fi
 
     mkdir -p "$binsd"
