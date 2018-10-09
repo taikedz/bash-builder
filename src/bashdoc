@@ -8,30 +8,31 @@
 #
 # To print just the `api` sections, call
 #
-# 	bashdoc -api ...
+#   bashdoc -api ...
+#
+# To list just available modules, simply run `bashdoc` on its own
 #
 ###/doc
 
 #%include autohelp.sh out.sh searchpaths.sh runmain.sh
 
-autohelp:check "$@"
-
 list_modules() {
+    local thepath f
     out:info "Available modules: "
 
-    echo "$BBPATH"|sed 's/:/\n/g'|while read THEPATH; do
-        out:warn "Checking $THEPATH"
-        ls "$THEPATH"|while read f; do
-            if [[ -f "$THEPATH/$f" ]]; then
-                echo -n "$f "
+    while read thepath; do
+        out:warn "Checking $thepath"
+        while read f; do
+            if [[ -f "$thepath/$f" ]]; then
+                echo "$f"
             fi
-        done
-        echo
-    done
-    echo
+        done < <(ls "$thepath") | column
+    done < <(echo "$BBPATH"|sed 's/:/\n/g')
 }
 
 main() {
+    autohelp:check "$@"
+
     if [[ -z "$*" ]]; then
         list_modules
         exit 0
