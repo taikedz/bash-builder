@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION_NUM=5.3.3
+VERSION_NUM=5.4
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {
@@ -142,10 +142,10 @@ checktags() {
 }
 
 $%function build_script(infile) {
-    $%t_BBPATH="$(dirname "$infile"):$BBPATH"
+    local t_BBPATH="$(dirname "$infile"):$BBPATH"
 
-    $%tfname="$(basename "$infile")"
-    $%tfile="$BUILDOUTD/$tfname"
+    local tfname="$(basename "$infile")"
+    local tfile="$BUILDOUTD/$tfname"
 
     out:info "Building $infile to $tfile"
 

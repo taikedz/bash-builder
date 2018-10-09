@@ -16,56 +16,10 @@
 bbuild:syntax_post() {
     [[ "${BBSYNTAX:-}" != off ]] || return 0
 
-	local target="${1:-}"; shift || :
+	local target="${1:-}"; shift || out:fail "No syntax post-processing target supplied !"
 	
     bbuild:syntax:expand_function_signatures "$target"
-	bbuild:syntax:expand_local "$target"
-	bbuild:syntax:expand_arg1 "$target"
-}
-
-### Arg1 expansion Usage:syntax
-#
-# An option which allows safe assignment of the first argument, and
-# forces a shift. If the shift errors (no value to consume), an error is generated
-#
-# 	You write ==>   varname=$%1
-#
-# 	You get   ==>   varname="${1:-}"; shift || (out:fail "Internal Error: Expected 'varname' argument in function")
-#
-# 	Example :
-#
-# 		myfunc() {
-# 			person=$%1
-# 			message=$%1
-#
-# 			echo "Hello $person : $message"
-# 		}
-#
-##/doc
-bbuild:syntax:expand_arg1() {
-	# adjacent quotes prevent this code from mangling itself
-	sed -r 's/([a-zA-Z0-9_]+)=\$''%1\s*/\1="${1:-}"; shift || (out:fail "(internal) Expected \"\1\" argument in function") /g' -i "$1"
-}
-
-### Shorthand `local` keyword Usage:syntax
-#
-# An option which allows quickly defining a local variable
-#
-# 	You write ===>   $%myvar=
-#
-# 	You get   ===>   local myvar=
-#
-# 	Example:
-#
-# 	    myfunc() {
-# 	        # declare a local variable person
-# 	        $%person="$1"
-#
-# 	        echo "Hello $person"
-# 	    }
-###/doc
-bbuild:syntax:expand_local() {
-	sed -r 's/^(\s*)\$''%([a-zA-Z0-9_]+)=/\1local \2=/g' -i "$1"
+    bbuild:syntax:dot_arrays "$target"
 }
 
 ### Function signature expansion Usage:syntax
@@ -118,11 +72,13 @@ bbuild:syntax:expand_function_signatures() {
 bbuild:syntax:dot_arrays() {
     local transforms
     transforms=(
-        # $%.object.property= --> $object['property']=
-        -e 's/\$%\.([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)=/\1['"'"'\2'"'"']=/g'
+        # $%.object.property=     --> object[property]=
+        # $%.object.$placeholder= --> object[$placeholder]=
+        -e 's/\$%\.([a-zA-Z0-9_]+)\.([$a-zA-Z0-9_]+)=/\1[\2]=/g'
 
-        # $%.object.property --> ${object[property]}
-        -e 's/\$%\.([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)/${\1[\2]}/g'
+        # $%.object.property     --> ${object[property]}
+        # $%.object.$placeholder --> ${object[$placeholder]}
+        -e 's/\$%\.([a-zA-Z0-9_]+)\.([$a-zA-Z0-9_]+)/${\1[\2]}/g'
 
         # $%.object[!] --> ${!object[@]}
         -e 's/\$%\.([a-zA-Z0-9_]+)\[\!\]/${!\1[@]}/g'
@@ -145,7 +101,7 @@ bbuild:syntax:dot_arrays() {
 
     sed -r "${transforms[@]}" -i "$1"
 
-    if grep "\$%\." "$1" ; then
+    if grep "\$%\." "$1"|grep -vP '^\s*#' ; then
         out:fail "--- Some dot-array syntax did not convert ---"
     fi
 }
