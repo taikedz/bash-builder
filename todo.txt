@@ -1,0 +1,5 @@
+# Todo
+
+* pre-build bbuild for distribution. Simply building from the dependencies on-install is insane
+    * installer should only optionally pull in bash-libs ; support to do it automatically should still be an option though
+* add an installation path for supporting-libs (`~/.local/lib/bbuild/bb` for example) that are of specific concern to bash-builder operation
