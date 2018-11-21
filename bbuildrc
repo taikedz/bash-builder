@@ -1,3 +1,3 @@
 BBFILES=(src/bbuild src/bashdoc src/tarshc)
 SHELLCHECK=false
-BBPATH=bash-libs/libs/
+BUILDOUTD=bin
