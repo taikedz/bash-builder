@@ -30,12 +30,9 @@ install_libs() {
 
     if [[ ! -d "bash-libs" ]]; then
         git clone https://github.com/taikedz/bash-libs
-    else
-        # TODO - this should seek to install the latest release version?
-        echo "---> bash-libs already exists; not updating"
     fi
 
-    "bash-libs/install.sh"
+    "bash-libs/install.sh" "latest-release"
 }
 
 ensure_bbpath() {
