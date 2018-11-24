@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+### Add Bash Builder Library Usage:help
+# Add a new library to the bash builder standard location (~/.local/lib/bash-builder/DIRNAME or /usr/local/lib/bash-builder/DIRNAME)
+#
+#   bbaddlib DIRPATH [--git URL]
+#
+# Copy the *.sh files from DIRPATH to a corresponding directory in the global path.
+#
+# If `DIRPATH/libs/` exists, adds files from there instead of directly from DIR
+#
+# If `DIRPATH/lib-name` exists, use it to name the destination directory.
+#
+# If the `--git URL` option is specified, clone the Git repository to DIRPATH
+#
+# Example
+#
+#   bbaddlib /tmp/bash-libs --git https://github.com/taikedz/bash-libs
+#
+###/doc
+
+#%include autohelp.sh
+#%include out.sh
+
+main() {
+    autohelp:check-or-null "$@"
+}
+
+main "$@"
