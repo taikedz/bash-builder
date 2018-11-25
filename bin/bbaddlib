@@ -3,7 +3,7 @@
 ### Add Bash Builder Library Usage:help
 # Add a new library to the bash builder standard location (~/.local/lib/bash-builder/DIRNAME or /usr/local/lib/bash-builder/DIRNAME)
 #
-#   bbaddlib DIRPATH [--git URL]
+#   bbaddlib DIRPATH [--git=URL] [--checkout=GITREF]
 #
 # Copy the *.sh files from DIRPATH to a corresponding directory in the global path.
 #
@@ -15,10 +15,184 @@
 #
 # Example
 #
-#   bbaddlib /tmp/bash-libs --git https://github.com/taikedz/bash-libs
+#   bbaddlib /tmp/bash-libs --git=https://github.com/taikedz/bash-libs
+#
 ###/doc
 
-##bash-libs: tty.sh @ 8acc9de3 (1.4.2)
+##bash-libs: safe.sh @ a656d7c4 (1.4.3)
+
+### Safe mode Usage:bbuild
+#
+# Set global safe mode options
+#
+# * Script bails if a statement or command returns non-zero status
+#   * except when in a conditional statement
+# * Accessing a variable that is not set is an error, causing non-zero status of the operation
+# * Prevents globs
+# * If a component of a pipe fails, the entire pipe statement returns non-zero
+#
+# Splitting over spaces
+# ---------------------
+#
+# You can also switch space splitting on or off (normal bash default is 'on')
+#
+# Given a function `foo()` that returns multiple lines, which may each have spaces in them, use safe splitting to return each item into an array as its own item, without splitting over spaces.
+#
+#   safe:space-split off
+#   mylist=(foo)
+#   safe:space-split on
+#
+# Having space splitting on causes statements like `echo "$*"` to print each argument on its own line.
+#
+# Globs
+# -------
+#
+# In safe mode, glob expansion like `ls .config/*` is turned off by default.
+#
+# You can turn glob expansion on and off with `safe:glob on` or `safe:glob off`
+#
+###/doc
+
+set -eufo pipefail
+
+safe:space-split() {
+    case "$1" in
+    off)
+        export IFS=$'\t\n'
+        ;;
+    on)
+        export IFS=$' \t\n'
+        ;;
+    *)
+        out:fail "API error: bad use of safe:split - must be 'on' or 'off' not '$1'"
+        ;;
+    esac
+}
+
+safe:glob() {
+    case "$1" in
+    off)
+        set -f
+        ;;
+    on)
+        set +f
+        ;;
+    *)
+        out:fail "API error: bad use of safe:glob - must be 'on' or 'off' not '$1'"
+        ;;
+    esac
+}
+##bash-libs: syntax-extensions.sh @ a656d7c4 (1.4.3)
+
+### Syntax Extensions Usage:bbuild
+#
+# Syntax extensions for bash-builder.
+#
+# You will need to import this library if you use Bash Builder's extended syntax macros.
+#
+# You should not however use the functions directly, but the extended syntax instead.
+#
+# API is documented in the "syntax" section
+#
+##/doc
+
+### syntax-extensions:use FUNCNAME ARGNAMES ... Usage:syntax
+#
+# Consume arguments into named global variables.
+#
+# If not enough argument values are found, the first named variable that failed to be assigned is printed as error
+#
+# ARGNAMES prefixed with '?' do not trigger an error
+#
+# Example:
+#
+#   #%include out.sh
+#   #%include syntax-extensions.sh
+#
+#   get_parameters() {
+#       . <(syntax-extensions:use get_parameters INFILE OUTFILE ?comment)
+#
+#       [[ -f "$INFILE" ]]  || out:fail "Input file '$INFILE' does not exist"
+#       [[ -f "$OUTFILE" ]] || out:fail "Output file '$OUTFILE' does not exist"
+#
+#       [[ -z "$comment" ]] || echo "Note: $comment"
+#   }
+#
+#   main() {
+#       get_parameters "$@"
+#
+#       echo "$INFILE will be converted to $OUTFILE"
+#   }
+#
+#   main "$@"
+#
+###/doc
+syntax-extensions:use() {
+    local argname arglist undef_f dec_scope argidx argone failmsg pos_ok
+    
+    dec_scope=""
+    [[ "${SYNTAXLIB_scope:-}" = local ]] || dec_scope=g
+    arglist=(:)
+    argone=\"\${1:-}\"
+    pos_ok=true
+    
+    for argname in "$@"; do
+        [[ "$argname" != -- ]] || break
+        [[ "$argname" =~ ^(\?|\*)?[0-9a-zA-Z_]+$ ]] || out:fail "Internal: Not a valid argument name '$argname'"
+
+        arglist+=("$argname")
+    done
+
+    argidx=1
+    while [[ "$argidx" -lt "${#arglist[@]}" ]]; do
+        argname="${arglist[$argidx]}"
+        failmsg="\"Internal : could not get '$argname' in function arguments\""
+        posfailmsg="Internal: positional argument '$argname' encountered after optional argument(s)"
+
+        if [[ "$argname" =~ ^\? ]]; then
+            echo "$SYNTAXLIB_scope ${argname:1}=$argone; shift || :"
+            pos_ok=false
+
+        elif [[ "$argname" =~ ^\* ]]; then
+            [[ "$pos_ok" != false ]] || out:fail "$posfailmsg"
+            echo "declare -n${dec_scope} ${argname:1}=$argone; shift || out:fail $failmsg"
+
+        else
+            [[ "$pos_ok" != false ]] || out:fail "$posfailmsg"
+            echo "$SYNTAXLIB_scope ${argname:1}=$argone; shift || out:fail $failmsg"
+        fi
+
+        argidx=$((argidx + 1))
+    done
+}
+
+
+### syntax-extensions:use:local FUNCNAME ARGNAMES ... Usage:syntax
+# 
+# Enables syntax macro: function signatures
+#   e.g. $%function func(var1 var2) { ... }
+#
+# Build with bbuild to leverage this function's use:
+#
+#   #%include out.sh
+#   #%include syntax-extensions.sh
+#
+#   $%function person(name email) {
+#       echo "$name <$email>"
+#
+#       # $1 and $2 have been consumed into $name and $email
+#       # The rest remains available in $* :
+#       
+#       echo "Additional notes: $*"
+#   }
+#
+#   person "Jo Smith" "jsmith@example.com" Some details
+#
+###/doc
+syntax-extensions:use:local() {
+    SYNTAXLIB_scope=local syntax-extensions:use "$@"
+}
+##bash-libs: tty.sh @ a656d7c4 (1.4.3)
 
 tty:is_ssh() {
     [[ -n "$SSH_TTY" ]] || [[ -n "$SSH_CLIENT" ]] || [[ "$SSH_CONNECTION" ]]
@@ -28,7 +202,7 @@ tty:is_pipe() {
     [[ ! -t 1 ]]
 }
 
-##bash-libs: colours.sh @ 8acc9de3 (1.4.2)
+##bash-libs: colours.sh @ a656d7c4 (1.4.3)
 
 ### Colours for terminal Usage:bbuild
 # A series of shorthand colour flags for use in outputs, and functions to set your own flags.
@@ -181,7 +355,7 @@ colours:auto() {
 
 colours:auto
 
-##bash-libs: out.sh @ 8acc9de3 (1.4.2)
+##bash-libs: out.sh @ a656d7c4 (1.4.3)
 
 ### Console output handlers Usage:bbuild
 #
@@ -269,7 +443,7 @@ function out:error {
     echo "${CBRED}ERROR: ${CRED}$*$CDEF" 1>&2
 }
 
-##bash-libs: autohelp.sh @ 8acc9de3 (1.4.2)
+##bash-libs: autohelp.sh @ a656d7c4 (1.4.3)
 
 ### Autohelp Usage:bbuild
 #
@@ -467,9 +641,269 @@ autohelp:check:section() {
         fi
     done
 }
+##bash-libs: patterns.sh @ a656d7c4 (1.4.3)
+
+### Useful patterns Usage:bbuild
+#
+# Some useful regex patterns, exported as environment variables.
+#
+# They are not foolproof, and you are encouraged to improve upon them.
+#
+# $PAT_blank - detects whether an entire line is empty or whitespace
+# $PAT_comment - detects whether is a line is a script comment (assumes '#' as the comment marker)
+# $PAT_num - detects whether the string is an integer number in its entirety
+# $PAT_cvar - detects if the string is a valid C variable name
+# $PAT_filename - detects if the string is a safe UNIX or Windows file name;
+#   does not allow presence of whitespace or special characters aside from '_', '.', '-'
+# $PAT_email - simple heuristic to determine whether a string looks like a valid email address
+#
+###/doc
+
+export PAT_blank='^\s*$'
+export PAT_comment='^\s*(#.*)?$'
+export PAT_num='^[0-9]+$'
+export PAT_cvar='^[a-zA-Z_][a-zA-Z0-9_]*$'
+export PAT_filename='^[a-zA-Z0-9_.-]$'
+export PAT_email="$PAT_filename@$PAT_filename.$PAT_cvar"
+
+##bash-libs: args.sh @ a656d7c4 (1.4.3)
+
+### args Usage:bbuild
+#
+# An arguments handling utility.
+#
+###/doc
+
+### args:get TOKEN ARGS ... Usage:bbuild
+#
+# Given a TOKEN, find the argument value
+#
+# Typically called with the parent's arguments
+#
+# 	args:get --key "$@"
+# 	args:get -k "$@"
+#
+# If TOKEN is an int, returns the argument at that index (starts at 1, negative numbers count from end backwards)
+#
+# If TOKEN starts with two dashes ("--"), expect the value to be supplied after an equal sign
+#
+# 	--token=desired_value
+#
+# If TOKEN starts with a single dash, and is a letter or a number, expect the value to be the following token
+#
+# 	-t desired_value
+#
+# Returns 1 if could not find anything appropriate.
+#
+###/doc
+
+args:get() {
+    local seek="$1"; shift || :
+
+    if [[ "$seek" =~ $PAT_num ]]; then
+        local arguments=("$@")
+
+        # Get the index starting at 1
+        local n=$((seek-1))
+        # but do not affect wrap-arounds
+        [[ "$n" -ge 0 ]] || n=$((n+1))
+
+        echo "${arguments[$n]}"
+
+    elif [[ "$seek" =~ ^--.+ ]]; then
+        args:get_long "$seek" "$@"
+
+    elif [[ "$seek" =~ ^-[a-zA-Z0-9]$ ]]; then
+        args:get_short "$seek" "$@"
+
+    else
+        return 1
+    fi
+}
+
+args:get_short() {
+    local token="$1"; shift || :
+    while [[ -n "$*" ]]; do
+        local item="$1"; shift || :
+
+        if [[ "$item" = "$token" ]]; then
+            echo "$1"
+            return 0
+        fi
+    done
+    return 1
+}
+
+args:get_long() {
+    local token="$1"; shift || :
+    local tokenpat="^$token=(.*)$"
+
+    for item in "$@"; do
+        if [[ "$item" =~ $tokenpat ]]; then
+            echo "${BASH_REMATCH[1]}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+### args:has TOKEN ARGS ... Usage:bbuild
+#
+# Determines whether TOKEN is present on its own in ARGS
+#
+# Typically called with the parent's arguments
+#
+# 	args:has thing "$@"
+#
+# Returns 0 on success for example
+#
+# 	args:has thing "one" "thing" "or" "another"
+#
+# Returns 1 on failure for example
+#
+# 	args:has thing "one thing" "or another"
+#
+# "one thing" is not a valid match for "thing" as a token.
+#
+###/doc
+
+args:has() {
+    local token="$1"; shift || :
+    for item in "$@"; do
+        if [[ "$token" = "$item" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+### args:after TOKEN ARGS ... Usage:bbuild
+#
+# Return all tokens after TOKEN via the RETARR_ARGSAFTER
+#
+#    myargs=(one two -- three "four and" five)
+# 	args:after -- "${myargs[@]}"
+#
+# 	for a in "${RETARR_ARGSAFTER}"; do
+# 		echo "$a"
+# 	done
+#
+# The above prints
+#
+# 	three
+# 	four and
+# 	five
+#
+###/doc
+
+args:after() {
+    local token="$1"; shift || :
+    
+    local current_token="$1"; shift || :
+    while [[ "$#" -gt 0 ]] && [[ "$current_token" != "$token" ]]; do
+        current_token="$1"; shift || :
+    done
+
+    RETARR_ARGSAFTER=("$@")
+}
+
+
+### args:use ARGNAMES ... -- ARGVALUES ... Usage:bbuild
+# DEPRECATED
+#
+# See help in syntax.sh
+###/doc
+#%bbtags w:deprecated w:use_syntax.sh
+args:use() {
+    syntax-extensions:use "$@"
+}
+
+args:use:local() {
+    SYNTAXLIB_scope=local syntax-extensions:use "$@"
+}
 
 main() {
+    . <(args:use:local  -- "$@") ; 
+    local dirpath libsource libsname libsdir url gitref
+
     autohelp:check-or-null "$@"
+
+    dirpath="${1:-}"; shift || out:fail "No lib target directory specified"
+
+    url="$(args:get --git "$@")" || :
+    gitref="$(args:get --checkout "$@")" || :
+
+    addlib:git-clone "$dirpath" "$url"
+    addlib:git-checkout "$dirpath" "$gitref"
+
+    set -x
+    addlib:target-dir "$dirpath" libsource
+    addlib:libs-name "$dirpath" libsname
+    set +x
+
+    addlib:set-libsdir "$dirpath" libsdir
+
+    if [[ -d "$libsource" ]]; then
+        rm -r "$libsource"
+    fi
+
+    rsync -a "$libsource/" "$libsdir/$libsname/"
+
+    out:info "Libs from '$libsource' installed as '$libname'"
+}
+
+addlib:git-clone() {
+    . <(args:use:local dirpath url -- "$@") ; 
+    if [[ -z "$url" ]]; then
+        return 0
+    fi
+
+    out:info "Clone from $url ..."
+
+    if [[ -e "$dirpath" ]]; then
+        out:warn "Skipping - '$dirpath' exists"
+        return 0
+    fi
+
+    git clone "$url" "$dirpath"
+}
+
+addlib:git-checkout() {
+    . <(args:use:local dirpath gitref -- "$@") ; 
+    [[ -n "$gitref" ]] || return 0
+
+    (
+        cd "$dirpath"
+        [[ -d "./.git" ]] || out:fail "'$PWD' is not a git repository"
+        git checkout "$gitref"
+    )
+}
+
+addlib:target-dir() {
+    . <(args:use:local dirpath *sourcedir -- "$@") ; 
+    sourcedir="$dirpath"
+
+    if [[ -d "$dirpath/libs" ]]; then
+        sourcedir="$dirpath/libs"
+    fi
+}
+
+addlib:libs-name() {
+    . <(args:use:local dirpath *libsname -- "$@") ; 
+    libsname="$(basename "$dirpath")"
+
+    if [[ -f "$dirpath/lib-name" ]]; then
+        libsname="$(cat "$dirpath/lib-name")"
+    fi
+}
+
+addlib:set-libsdir() {
+    . <(args:use:local dirpath *libsdir -- "$@") ; 
+    libsdir="$HOME/.local/bin"
+
+    if [[ "$UID" = 0 ]]; then
+        libsdir="/usr/local/lib/bash-builder"
+    fi
 }
 
 main "$@"

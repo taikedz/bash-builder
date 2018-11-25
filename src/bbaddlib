@@ -3,7 +3,7 @@
 ### Add Bash Builder Library Usage:help
 # Add a new library to the bash builder standard location (~/.local/lib/bash-builder/DIRNAME or /usr/local/lib/bash-builder/DIRNAME)
 #
-#   bbaddlib DIRPATH [--git URL]
+#   bbaddlib DIRPATH [--git=URL] [--checkout=GITREF]
 #
 # Copy the *.sh files from DIRPATH to a corresponding directory in the global path.
 #
@@ -15,15 +15,92 @@
 #
 # Example
 #
-#   bbaddlib /tmp/bash-libs --git https://github.com/taikedz/bash-libs
+#   bbaddlib /tmp/bash-libs --git=https://github.com/taikedz/bash-libs
 #
 ###/doc
 
+#%include safe.sh
+#%include syntax-extensions.sh
 #%include autohelp.sh
 #%include out.sh
+#%include args.sh
 
-main() {
+$%function main() {
+    local dirpath libsource libsname libsdir url gitref
+
     autohelp:check-or-null "$@"
+
+    dirpath="${1:-}"; shift || out:fail "No lib target directory specified"
+
+    url="$(args:get --git "$@")" || :
+    gitref="$(args:get --checkout "$@")" || :
+
+    addlib:git-clone "$dirpath" "$url"
+    addlib:git-checkout "$dirpath" "$gitref"
+
+    set -x
+    addlib:target-dir "$dirpath" libsource
+    addlib:libs-name "$dirpath" libsname
+    set +x
+
+    addlib:set-libsdir "$dirpath" libsdir
+
+    if [[ -d "$libsource" ]]; then
+        rm -r "$libsource"
+    fi
+
+    rsync -a "$libsource/" "$libsdir/$libsname/"
+
+    out:info "Libs from '$libsource' installed as '$libname'"
+}
+
+$%function addlib:git-clone(dirpath url) {
+    if [[ -z "$url" ]]; then
+        return 0
+    fi
+
+    out:info "Clone from $url ..."
+
+    if [[ -e "$dirpath" ]]; then
+        out:warn "Skipping - '$dirpath' exists"
+        return 0
+    fi
+
+    git clone "$url" "$dirpath"
+}
+
+$%function addlib:git-checkout(dirpath gitref) {
+    [[ -n "$gitref" ]] || return 0
+
+    (
+        cd "$dirpath"
+        [[ -d "./.git" ]] || out:fail "'$PWD' is not a git repository"
+        git checkout "$gitref"
+    )
+}
+
+$%function addlib:target-dir(dirpath *sourcedir) {
+    sourcedir="$dirpath"
+
+    if [[ -d "$dirpath/libs" ]]; then
+        sourcedir="$dirpath/libs"
+    fi
+}
+
+$%function addlib:libs-name(dirpath *libsname) {
+    libsname="$(basename "$dirpath")"
+
+    if [[ -f "$dirpath/lib-name" ]]; then
+        libsname="$(cat "$dirpath/lib-name")"
+    fi
+}
+
+$%function addlib:set-libsdir(dirpath *libsdir) {
+    libsdir="$HOME/.local/bin"
+
+    if [[ "$UID" = 0 ]]; then
+        libsdir="/usr/local/lib/bash-builder"
+    fi
 }
 
 main "$@"
