@@ -6,11 +6,11 @@ main() {
 
     if [[ "$UID" = 0 ]]; then
         bindir="/usr/local/bin"
-        libdir="/usr/local/lib/bash-builder"
+        libsdir="/usr/local/lib/bash-builder"
     fi
 
     mkdir -p "$bindir"
-    mkdir -p "$libdir"
+    mkdir -p "$libsdir"
 
     cp bin/bbuild bin/bashdoc bin/tarshc "$bindir/"
     ensure_bbpath
@@ -28,7 +28,7 @@ install_libs() {
         return
     fi
 
-    if [[ ! -d "bash-libs" ]]; then
+    if [[ ! -e "bash-libs" ]]; then
         git clone https://github.com/taikedz/bash-libs
     fi
 
