@@ -605,7 +605,7 @@ function searchpaths:file_from {
 }
 
 tarshc:locate_header() {
-    TARSHC_header="$(searchpaths:file_from "$BBPATH" tarheader.sh)" || :
+    TARSHC_header="$(searchpaths:file_from "$BBPATH" std/tarheader.sh)" || :
 
     [[ -n "$TARSHC_header" ]] || out:fail "Could not locate an unpack script in or amongst [$BBPATH]"
 }

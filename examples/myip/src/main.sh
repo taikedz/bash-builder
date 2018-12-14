@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-#%include out.sh
+#%include std/out.sh
 
 chomp() {
     sed "s/$1//"

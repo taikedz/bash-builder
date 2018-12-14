@@ -1,4 +1,0 @@
-BBFILES=(src/connect)
-BBPATH="$BBPATH:./"
-
-BUILDOUTD=./bin/

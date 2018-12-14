@@ -99,18 +99,22 @@ set -euo pipefail
 #
 #   autohelp - processes the top help comments and uses them in --help display
 
-#%include runmain.sh autohelp.sh
+#%include std/runmain.sh
+#%include std/autohelp.sh
 
 # ----------------------------------------------------------
 # Import elements you intend to use
 
-#%include out.sh askuser.sh
+#%include std/out.sh
+#%include std/askuser.sh
 
 # ----------------------------------------------------------
 # Include our local scripts
 # By default, the same directory as contains the current script is also part of BBPATH
 
-#%include direct_connect.sh manage_servers.sh choosing.sh
+#%include direct_connect.sh
+#%include manage_servers.sh
+#%include choosing.sh
 
 # ----------------------------------------------------------
 # Configuration variables

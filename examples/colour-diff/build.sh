@@ -1,0 +1,1 @@
+bbuild src/cdiff cdiff
