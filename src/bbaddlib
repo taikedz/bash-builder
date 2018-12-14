@@ -19,11 +19,11 @@
 #
 ###/doc
 
-#%include safe.sh
-#%include syntax-extensions.sh
-#%include autohelp.sh
-#%include out.sh
-#%include args.sh
+#%include std/safe.sh
+#%include std/syntax-extensions.sh
+#%include std/autohelp.sh
+#%include std/out.sh
+#%include std/args.sh
 
 $%function main() {
     local dirpath libsource libsname libsdir url gitref

@@ -42,8 +42,8 @@ ensure_bbpath() {
         bashrcpath="/etc/bash.bashrc"
     fi
 
-    if ! grep '^export BBPATH=' ; then
-        echo "BBPATH=$libsdir" >> "$bashrcpath"
+    if ! grep '^export BBPATH=' -q "$bashrcpath" ; then
+        echo "export BBPATH=$libsdir" >> "$bashrcpath"
     fi
 }
 

@@ -49,7 +49,7 @@ will echo nothing, as `false` returns a non-zero status, whereas
 	if false; then echo "Won't happen"; fi
 	echo "Passed"
 
-will echo "pass".
+will echo `Passed`.
 
 If a command however returns a nonzero status inside a pipe, say `cat /prc/cpuinfo | grep 'model name' | wc -l` (`/prc` does not exist), the pipe itself only fails if the last command returns a non-zero (here, `wc` exits with `0`).
 
@@ -97,30 +97,30 @@ or
 		# bash only
 	}
 
-Rmember the rule of thumb: no function should have more than around 15-20 lines of operational code (not counting variable declarations and other "setup" and "teardown" code).
+Remember the rule of thumb: no function should have more than around 15-20 lines of operational code (not counting variable declarations and other "setup" and "teardown" code).
 
 ### Do not use naked code
 
-A program should have one and only one entry point: its `main` function. Trying to hunt down execution flow problems when you're not sure where to start is tedious.
+A program should have one, and only one, entry point: its `main` function. Trying to hunt down execution flow problems when you're not sure where to start is tedious.
 
-As a scripting language, bash permits writing code without wrapping it in a function. Most of the time, this is alright, but when writing code for re-use, it is nearly always best to encapsulate it in a function. You never know when you're going to import that code and *not* expect it to run until you ask it to run.
+As a scripting language, bash permits writing code without wrapping it in a function. Most of the time, this is alright, but when writing code for re-use, it is nearly always best to encapsulate it in a function. You never know when you're going to import that code and expect it *NOT* to run until you ask it to run.
 
 As such, wrap all your code inside functions, and have only a single bare call to the main function (call it whatever you want) - for example
 
-	mymain() {
+	my:main() {
 		echo "Arguments were:"
 		for arg in "$@"; do
 			echo "  $arg"
 		done
 	}
 
-	mymain "$@"
+	my:main "$@"
 
 ### Namespace your functions
 
 > `bash` only. In `sh`, use `_` (underscore)
 
-A little known fact of bash is that `:` and `.` are perfectly valid characters to have in a function name, so you should use them to namespace your functions, especially when writing libraries that will be imported (for example, with [bash-builder](https://github.com/taikedz/bash-builder)).
+A little known fact of bash is that `:` and `.` are all perfectly valid characters to have in a function name, so you should use them to namespace your functions, especially when writing libraries that will be imported (for example, with [bash-builder](https://github.com/taikedz/bash-builder)).
 
 	bb:echo() {
 		echo "$*" >&2
@@ -174,7 +174,7 @@ For example, `/bin/[` only has support for some basic matching operations. The f
 
 	if [[ "$text" =~ (.)e ]]; then echo "The first instance of 'e' in [$text] is '${BASH_REMATCH[1]}'"; fi
 
-Note the final example, where we use a [regular expression](https://www.regular-epxressions.info) with capturing groups. Since `[[` is a language construct in its own right, we do not need to worry about `(.)e` running a subshell - the context indicates that it is a pattern; als the `BASH_REMATCH` array can be used to access captured groups.
+Note the final example, where we use a [regular expression](https://www.regular-epxressions.info) with capturing groups. Since `[[` is a language construct in its own right, we do not need to worry about `(.)e` running a subshell - the context indicates that it is a pattern. The `${BASH_REMATCH[@]}` array can be used to access captured groups.
 
 ## Variables
 
@@ -267,6 +267,30 @@ Copying an array is a little more involved
 
 Functions can only output string data - as such, returning any arrays whose members contain whitespace is not possible, and instead, using a global variable is the only way available.
 
+### Use pointer variables
+
+The `declare -n` keyword allows creating variables that act as pointers to other variables. In this way, a secondary function can assign values to a variable in a higher-up function.
+
+    outer() {
+        local myvar=(a b c)
+
+        change_array myvar
+
+        for x in "${myvar[@]}"; do
+            echo "$x"
+        done
+        # prints "one", "two" and "three" on their respective lines
+        # due to the change by change_array
+    }
+
+    change_array() {
+        declare -n inner="$1" # inner becomes a pointer to the name specified as argument
+
+        # We can now affect the varaible from further up the stack.
+
+        inner=(one two three)
+    }
+
 ## Separate into files
 
 Like with most programming languages, it is best to keep your code conceptually organized into multiple files for easier management and source control.
@@ -279,5 +303,5 @@ Otherwise, use [bash builder](https://github.com/taikedz/bash-builder) to aggreg
 
 ## Additional resources
 
-* [Common bash gitchas](http://mywiki.wooledge.org/BashPitfalls)
+* [Common bash gotchas](http://mywiki.wooledge.org/BashPitfalls)
 * [Gogole's Shell Style Guide](https://google.github.io/styleguide/shell.xml)

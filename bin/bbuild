@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION_NUM=5.4
+VERSION_NUM=6.0
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {
@@ -17,64 +17,29 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 #
 # Build a script using Bash Builder
 #
-# 	bbuild [OPTIONS ...] SCRIPTS ...
+# 	bbuild [OPTIONS ...] SOURCE [DEST]
+#
+# SOURCE - the source script
+# DEST - the destination file to build to
 #
 # Options
 # -------
 #
 #   -c
 #   --check
-#   	use shellcheck for subsequent files
+#   	use shellcheck
 #
 #   -C
 #   --no-check
-#   	don't use shellcheck for subsequent files
+#   	don't use shellcheck
 #
 #   --ignore-tags
 #   	Ignore tags in sourced files
 #
 #   --out=DIRECTORY
-#   	Specify the output directory
+#   	Specify the default output directory
+#   	Used if DEST is not specified.
 #
-# Environment
-# -----------
-#
-# You can set environment variables in your .bashrc file, or in a local `./bbuildrc` file, which is sourced once before commencing build.
-#
-# The order of precedence for options and environment variables is:
-#
-# * command line arguments
-# * `bbuildrc` settings
-# * local environment settings
-# * `.bashrc` settings
-#
-# Environment variables available, and their defaults:
-#
-# BBPATH -- a colon-separated list of directories wherein to find files for inclusion:
-#
-# 	BBPATH=$HOME/.local/lib/bbuild:/usr/local/lib/bbuild
-#
-#
-# SHELLCHECK -- "true" or "false", whether to run shellcheck on the finally built script
-#
-# 	SHELLCHECK=false
-#
-#
-# BUILDOUTD -- directory in which to place build results
-#
-#    BUILDOUTD=./build-outd
-#
-#
-# IGNORETAGS -- if set to "unsafe", ignores tags and their effects.
-#
-# 	(unset by default)
-#
-# BBFILES -- a list of files to build ; overridden by any files specified on the command line
-#   Surround these in parentheses to specify several scripts.
-#   This allows simply running "bbuild" to build specified project scripts
-#
-# 	BBFILES=(src/script1 src/script2 libs/support_script)
-# 
 #
 # Syntax post-processing
 # ----------------------
@@ -86,7 +51,70 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 #
 ###/doc
 
-##bash-libs: tty.sh @ bf310b32 (1.4.1)
+##bash-libs: safe.sh @ 69724119 (2.0)
+
+### Safe mode Usage:bbuild
+#
+# Set global safe mode options
+#
+# * Script bails if a statement or command returns non-zero status
+#   * except when in a conditional statement
+# * Accessing a variable that is not set is an error, causing non-zero status of the operation
+# * Prevents globs
+# * If a component of a pipe fails, the entire pipe statement returns non-zero
+#
+# Splitting over spaces
+# ---------------------
+#
+# You can also switch space splitting on or off (normal bash default is 'on')
+#
+# Given a function `foo()` that returns multiple lines, which may each have spaces in them, use safe splitting to return each item into an array as its own item, without splitting over spaces.
+#
+#   safe:space-split off
+#   mylist=(foo)
+#   safe:space-split on
+#
+# Having space splitting on causes statements like `echo "$*"` to print each argument on its own line.
+#
+# Globs
+# -------
+#
+# In safe mode, glob expansion like `ls .config/*` is turned off by default.
+#
+# You can turn glob expansion on and off with `safe:glob on` or `safe:glob off`
+#
+###/doc
+
+set -eufo pipefail
+
+safe:space-split() {
+    case "$1" in
+    off)
+        export IFS=$'\t\n'
+        ;;
+    on)
+        export IFS=$' \t\n'
+        ;;
+    *)
+        out:fail "API error: bad use of safe:split - must be 'on' or 'off' not '$1'"
+        ;;
+    esac
+}
+
+safe:glob() {
+    case "$1" in
+    off)
+        set -f
+        ;;
+    on)
+        set +f
+        ;;
+    *)
+        out:fail "API error: bad use of safe:glob - must be 'on' or 'off' not '$1'"
+        ;;
+    esac
+}
+##bash-libs: tty.sh @ 69724119 (2.0)
 
 tty:is_ssh() {
     [[ -n "$SSH_TTY" ]] || [[ -n "$SSH_CLIENT" ]] || [[ "$SSH_CONNECTION" ]]
@@ -96,7 +124,7 @@ tty:is_pipe() {
     [[ ! -t 1 ]]
 }
 
-##bash-libs: colours.sh @ bf310b32 (1.4.1)
+##bash-libs: colours.sh @ 69724119 (2.0)
 
 ### Colours for terminal Usage:bbuild
 # A series of shorthand colour flags for use in outputs, and functions to set your own flags.
@@ -249,7 +277,7 @@ colours:auto() {
 
 colours:auto
 
-##bash-libs: out.sh @ bf310b32 (1.4.1)
+##bash-libs: out.sh @ 69724119 (2.0)
 
 ### Console output handlers Usage:bbuild
 #
@@ -336,8 +364,120 @@ function out:fail {
 function out:error {
     echo "${CBRED}ERROR: ${CRED}$*$CDEF" 1>&2
 }
+##bash-libs: syntax-extensions.sh @ 69724119 (2.0)
 
-##bash-libs: autohelp.sh @ bf310b32 (1.4.1)
+### Syntax Extensions Usage:syntax
+#
+# Syntax extensions for bash-builder.
+#
+# You will need to import this library if you use Bash Builder's extended syntax macros.
+#
+# You should not however use the functions directly, but the extended syntax instead.
+#
+##/doc
+
+### syntax-extensions:use FUNCNAME ARGNAMES ... Usage:syntax
+#
+# Consume arguments into named global variables.
+#
+# If not enough argument values are found, the first named variable that failed to be assigned is printed as error
+#
+# ARGNAMES prefixed with '?' do not trigger an error
+#
+# Example:
+#
+#   #%include out.sh
+#   #%include syntax-extensions.sh
+#
+#   get_parameters() {
+#       . <(syntax-extensions:use get_parameters INFILE OUTFILE ?comment)
+#
+#       [[ -f "$INFILE" ]]  || out:fail "Input file '$INFILE' does not exist"
+#       [[ -f "$OUTFILE" ]] || out:fail "Output file '$OUTFILE' does not exist"
+#
+#       [[ -z "$comment" ]] || echo "Note: $comment"
+#   }
+#
+#   main() {
+#       get_parameters "$@"
+#
+#       echo "$INFILE will be converted to $OUTFILE"
+#   }
+#
+#   main "$@"
+#
+###/doc
+syntax-extensions:use() {
+    local argname arglist undef_f dec_scope argidx argone failmsg pos_ok
+    
+    dec_scope=""
+    [[ "${SYNTAXLIB_scope:-}" = local ]] || dec_scope=g
+    arglist=(:)
+    argone=\"\${1:-}\"
+    pos_ok=true
+    
+    for argname in "$@"; do
+        [[ "$argname" != -- ]] || break
+        [[ "$argname" =~ ^(\?|\*)?[0-9a-zA-Z_]+$ ]] || out:fail "Internal: Not a valid argument name '$argname'"
+
+        arglist+=("$argname")
+    done
+
+    argidx=1
+    while [[ "$argidx" -lt "${#arglist[@]}" ]]; do
+        argname="${arglist[$argidx]}"
+        failmsg="\"Internal : could not get '$argname' in function arguments\""
+        posfailmsg="Internal: positional argument '$argname' encountered after optional argument(s)"
+
+        if [[ "$argname" =~ ^\? ]]; then
+            echo "$SYNTAXLIB_scope ${argname:1}=$argone; shift || :"
+            pos_ok=false
+
+        elif [[ "$argname" =~ ^\* ]]; then
+            [[ "$pos_ok" != false ]] || out:fail "$posfailmsg"
+            echo "declare -n${dec_scope} ${argname:1}=$argone; shift || out:fail $failmsg"
+
+        else
+            [[ "$pos_ok" != false ]] || out:fail "$posfailmsg"
+            echo "$SYNTAXLIB_scope ${argname}=$argone; shift || out:fail $failmsg"
+        fi
+
+        argidx=$((argidx + 1))
+    done
+}
+
+
+### syntax-extensions:use:local FUNCNAME ARGNAMES ... Usage:syntax
+# 
+# Enables syntax macro: function signatures
+#   e.g. $%function func(var1 var2) { ... }
+#
+# Build with bbuild to leverage this function's use:
+#
+#   #%include out.sh
+#   #%include syntax-extensions.sh
+#
+#   $%function person(name email) {
+#       echo "$name <$email>"
+#
+#       # $1 and $2 have been consumed into $name and $email
+#       # The rest remains available in $* :
+#       
+#       echo "Additional notes: $*"
+#   }
+#
+#   person "Jo Smith" "jsmith@example.com" Some details
+#
+###/doc
+syntax-extensions:use:local() {
+    SYNTAXLIB_scope=local syntax-extensions:use "$@"
+}
+
+args:use:local() {
+    syntax-extensions:use:local "$@"
+}
+
+##bash-libs: autohelp.sh @ 69724119 (2.0)
 
 ### Autohelp Usage:bbuild
 #
@@ -391,7 +531,7 @@ function out:error {
 #
 # Example usage in a multi-function script:
 #
-#   #!/bin/bash
+#   #!usr/bin/env bash
 #
 #   ### Main help Usage:help
 #   # The main help
@@ -402,7 +542,7 @@ function out:error {
 #   ###/doc
 #
 #   feature1() {
-#       autohelp:check_section feature_1 "$@"
+#       autohelp:check:section feature_1 "$@"
 #       echo "Feature I"
 #   }
 #
@@ -411,26 +551,17 @@ function out:error {
 #   ###/doc
 #
 #   feature2() {
-#       autohelp:check_section feature_2 "$@"
+#       autohelp:check:section feature_2 "$@"
 #       echo "Feature II"
 #   }
 #
 #   main() {
-#       if [[ -z "$*" ]]; then
-#           ### No command specified Usage:no-command
-#           #No command specified. Try running with `--help`
-#           ###/doc
-#
-#           autohelp:print no-command
-#           exit 1
-#       fi
-#
 #       case "$1" in
 #       feature1|feature2)
 #           "$1" "$@"            # Pass the global script arguments through
 #           ;;
 #       *)
-#           autohelp:check "$@"  # Check if main help was asked for, if so, exits
+#           autohelp:check-no-null "$@"  # Check if main help was asked for, if so, or if no args, exit with help
 #
 #           # Main help not requested, return error
 #           echo "Unknown feature"
@@ -459,7 +590,6 @@ autohelp:print() {
     [[ -n "$section_string" ]] || section_string=help
     [[ -n "$target_file" ]] || target_file="$0"
 
-    #echo -e "\n$(basename "$target_file")\n===\n"
     local sec_start='^\s*'"$HELPCHAR$HELPCHAR$HELPCHAR"'\s+(.+?)\s+Usage:'"$section_string"'\s*$'
     local sec_end='^\s*'"$HELPCHAR$HELPCHAR$HELPCHAR"'\s*/doc\s*$'
     local in_section=false
@@ -493,20 +623,47 @@ autohelp:paged() {
     autohelp:print "$@" | $PAGER
 }
 
+### autohelp:check-or-null ARGS ... Usage:bbuild
+# Print help if arguments are empty, or if arguments contain a '--help' token
+#
+###/doc
+autohelp:check-or-null() {
+    if [[ -z "$*" ]]; then
+        autohelp:print help "$0"
+        exit 0
+    else
+        autohelp:check:section "help" "$@"
+    fi
+}
+
+### autohelp:check-or-null:section SECTION ARGS ... Usage:bbuild
+# Print help section SECTION if arguments are empty, or if arguments contain a '--help' token
+#
+###/doc
+autohelp:check-or-null:section() {
+    . <(args:use:local section -- "$@") ; 
+    if [[ -z "$*" ]]; then
+        autohelp:print "$section" "$0"
+        exit 0
+    else
+        autohelp:check:section "$section" "$@"
+    fi
+}
+
 ### autohelp:check ARGS ... Usage:bbuild
 #
 # Automatically print "help" sections and exit, if "--help" is detected in arguments
 #
 ###/doc
 autohelp:check() {
-    autohelp:check_section "help" "$@"
+    autohelp:check:section "help" "$@"
 }
 
-### autohelp:check_section SECTION ARGS ... Usage:bbuild
+### autohelp:check:section SECTION ARGS ... Usage:bbuild
 # Automatically print documentation for named section and exit, if "--help" is detected in arguments
 #
 ###/doc
-autohelp:check_section() {
+autohelp:check:section() {
     local section arg
     section="${1:-}"; shift || out:fail "No help section specified"
 
@@ -518,7 +675,7 @@ autohelp:check_section() {
         fi
     done
 }
-##bash-libs: patterns.sh @ bf310b32 (1.4.1)
+##bash-libs: patterns.sh @ 69724119 (2.0)
 
 ### Useful patterns Usage:bbuild
 #
@@ -543,7 +700,7 @@ export PAT_cvar='^[a-zA-Z_][a-zA-Z0-9_]*$'
 export PAT_filename='^[a-zA-Z0-9_.-]$'
 export PAT_email="$PAT_filename@$PAT_filename.$PAT_cvar"
 
-##bash-libs: args.sh @ bf310b32 (1.4.1)
+##bash-libs: args.sh @ 69724119 (2.0)
 
 ### args Usage:bbuild
 #
@@ -684,91 +841,7 @@ args:after() {
     RETARR_ARGSAFTER=("$@")
 }
 
-### args:use ARGNAMES ... -- ARGVALUES ... Usage:bbuild
-# 
-# Consume arguments into named global variables.
-#
-# If not enough argument values are found, the first named variable that failed to be assigned is printed as error
-#
-# ARGNAMES prefixed with '?' do not trigger an error
-#
-# Example:
-#
-#   #%include out.sh
-#   #%include args.sh
-#
-#   get_parameters() {
-#       . <(args:use INFILE OUTFILE ?comment -- "$@")
-#
-#       [[ -f "$INFILE" ]]  || out:fail "Input file '$INFILE' does not exist"
-#       [[ -f "$OUTFILE" ]] || out:fail "Output file '$OUTFILE' does not exist"
-#
-#       [[ -z "$comment" ]] || echo "Note: $comment"
-#   }
-#
-#   main() {
-#       get_parameters "$@"
-#
-#       echo "$INFILE will be converted to $OUTFILE"
-#   }
-#
-#   main "$@"
-#
-###/doc
-args:use() {
-    local argname arglist undef_f
-    arglist=(:)
-    for argname in "$@"; do
-        [[ "$argname" != -- ]] || break
-        [[ "$argname" =~ ^\??[0-9a-zA-Z_]+$ ]] || out:fail "Internal: Not a valid argument name '$argname'"
-
-        arglist+=("$argname")
-    done
-
-    for argname in "${arglist[@]:1}"; do
-        if [[ "$argname" =~ ^\? ]]; then
-            argname="${argname:1}"
-            undef_f=":"
-        else
-            undef_f="out:fail \"Internal : could not get '$argname'\""
-        fi
-
-        echo "$ARGSLIB_scope $argname=\"\${1:-}\"; shift || $undef_f"
-    done
-}
-
-
-### args:use:local ARGNAMES ... -- ARGVALUES ... Usage:bbuild
-# 
-# Consume arguments into named variables. You need to use process subtitution and sourcing
-#   to call the function, so that it affects the scope in your function.
-#
-# If not enough argument values are found, the named variable that failed to be assigned is printed as error
-#
-# Example:
-#
-#   #%include out.sh
-#   #%include args.sh
-#
-#   person() {
-#       . <(args:use:local name email -- "$@")
-#
-#       echo "$name <$email>"
-#
-#       # $1 and $2 have been consumed into $name and $email
-#       # The rest remains available in $* :
-#       
-#       echo "Additional notes: $*"
-#   }
-#
-#   person "Jo Smith" "jsmith@exam0ple.com" Some details
-#
-###/doc
-args:use:local() {
-    ARGSLIB_scope=local args:use "$@"
-}
-
-##bash-libs: debug.sh @ bf310b32 (1.4.1)
+##bash-libs: debug.sh @ 69724119 (2.0)
 
 ### Debug lib Usage:bbuild
 #
@@ -851,9 +924,16 @@ function debug:dump {
 #
 # Requires `DEBUG_mode` set to true
 #
-# When the script runs, the message is printed with a propmt, and execution pauses.
+# When the script runs, the message is printed with a prompt, and execution pauses.
 #
 # Press return to continue execution.
+#
+# Type a variable name, with leading `$`, to dump it, e.g. `$myvar`
+#
+# Type a variable name, with leading `$`, follwoed by an assignment to change its value, e.g. `$myvar=new value`
+#  the new value will be seen by the script.
+#
+# Type 'env' to dump the current environment variables.
 #
 # Type `exit`, `quit` or `stop` to stop the program. If the breakpoint is in a subshell,
 #  execution from after the subshell will be resumed.
@@ -862,15 +942,53 @@ function debug:dump {
 
 function debug:break {
     [[ "$DEBUG_mode" = true ]] || return 0
+    local reply
 
-    echo -en "${CRED}BREAKPOINT: $* >$CDEF " >&2
-    read
-    if [[ "$REPLY" =~ quit|exit|stop ]]; then
-        echo "${CBRED}ABORT${CDEF}"
+    while true; do
+        read -p "${CRED}BREAKPOINT: $* >$CDEF " reply
+        if [[ "$reply" =~ quit|exit|stop ]]; then
+            echo "${CBRED}ABORT${CDEF}" >&2
+            exit 127
+
+        elif [[ "$reply" = env ]]; then
+            env |sed 's//^[/g' |debug:dump "--- "
+
+        elif [[ "$reply" =~ ^\$ ]]; then
+            debug:_break_dump "${reply:1}" || :
+
+        elif [[ -z "$reply" ]]; then
+            return 0
+        else
+            debug:print "'quit','exit' or 'stop' to abort; '\$varname' to see a variable's contents; '\$varname=new value' to assign a new value for run time; <Enter> to continue"
+        fi
+    done
+}
+
+debug:_break_dump() {
+    local inspectable="$1"
+    local varname="$1"
+    local varval
+
+    if [[ "$inspectable" =~ = ]]; then
+        varname="${inspectable%%=*}"
+        varval="${inspectable#*=}"
+    fi
+
+    [[ "$varname" =~ $PAT_cvar ]] || {
+        debug:print "${CRED}Invalid var name '$varname'"
+        return 1
+    }
+
+    declare -n inspect="$varname"
+
+    if [[ "$inspectable" =~ = ]]; then
+        inspect="$varval"
+    else
+        echo "$inspect"
     fi
 }
 
-##bash-libs: searchpaths.sh @ bf310b32 (1.4.1)
+##bash-libs: searchpaths.sh @ 69724119 (2.0)
 
 # FIXME - set function signature in head of help
 ### searchpaths:file_from PATHDEF FILE Usage:bbuild
@@ -906,7 +1024,7 @@ function searchpaths:file_from {
     return 1
 }
 
-##bash-libs: includefile2.sh @ bf310b32 (1.4.1)
+##bash-libs: includefile2.sh @ 69724119 (2.0)
 
 ### File Inclusion Usage:bbuild
 # Library for including (once) or inserting (any time called) external files ontents
@@ -1018,7 +1136,7 @@ includefile:_cat_once() {
 includefile:cleanup() {
     rm ./._include-*
 }
-##bash-libs: bincheck.sh @ bf310b32 (1.4.1)
+##bash-libs: bincheck.sh @ 69724119 (2.0)
 
 ### bincheck:get COMMANDS ... Usage:bbuild
 #
@@ -1101,17 +1219,12 @@ bincheck:path() {
 #
 ###/doc
 
-# TODO - there are several array-related shortcuts to add
-# * transparent handling of serialization
-#   * though this may be rendered less relevant with strict mode
-
 bbuild:syntax_post() {
     [[ "${BBSYNTAX:-}" != off ]] || return 0
 
 	local target="${1:-}"; shift || out:fail "No syntax post-processing target supplied !"
 	
     bbuild:syntax:expand_function_signatures "$target"
-    bbuild:syntax:dot_arrays "$target"
 }
 
 ### Function signature expansion Usage:syntax
@@ -1137,78 +1250,10 @@ bbuild:syntax:expand_function_signatures() {
     sed -r 's/^(\s*)\$''%function\s*([a-zA-Z0-9_:.-]+)\(([^)]+?)\)\s+\{''/''\1\2() {\n\1    . <(args:use:local \3 -- "$@") ; ''/' -i "$1"
 }
 
-### Dot notation for associative arrays Usage:syntax
-#
-# Access a data map array via dot notation:
-#
-# Dot notation is identified by use of `$%.`
-#
-# Assignment is done by using an `=` sign immediately after the dot notation
-#
-#   object[property1]=value
-#   object[property2]=stuff
-#
-# Value printing is done by not including an equality sign
-#
-#   echo "${object[property1]}"
-#
-# An iterable series of values can be printed using `@` notation
-#
-#   process_values "${object[@]}"
-#
-# The values themselves, on one line, can be printed using `*` notation
-#
-#   echo "${object[*]}"
-#
-###/doc
-bbuild:syntax:dot_arrays() {
-    local transforms
-    transforms=(
-        # object[property]=     --> object[property]=
-        # object[$placeholder]= --> object[$placeholder]=
-        -e 's/\$%\.([a-zA-Z0-9_]+)\.([$a-zA-Z0-9_]+)=/\1[\2]=/g'
-
-        # ${object[property]}     --> ${object[property]}
-        # ${object[$placeholder]} --> ${object[$placeholder]}
-        -e 's/\$%\.([a-zA-Z0-9_]+)\.([$a-zA-Z0-9_]+)/${\1[\2]}/g'
-
-        # ${!object[@]} --> ${!object[@]}
-        -e 's/\$%\.([a-zA-Z0-9_]+)\[\!\]/${!\1[@]}/g'
-
-        # ${object[@]} --> ${object[@]}
-        -e 's/\$%\.([a-zA-Z0-9_]+)\[@\]/${\1[@]}/g'
-
-        # ${object[*]} --> ${object[*]}
-        -e 's/\$%\.([a-zA-Z0-9_]+)\[\*\]/${\1[*]}/g'
-
-        # ${object[<some variable or string>]} --> ${object[<the same>]}
-        -e 's/\$%\.([a-zA-Z0-9_]+)\[([^]]+)\]/${\1[\2]}/g'
-
-        # declare -A object --> declare -A object
-        -e 's/local\s+\$%\.([a-zA-Z0-9_]+)/declare -A \1/g'
-
-        # declare -Ag object --> declare -Ag object
-        -e 's/\$%\.([a-zA-Z0-9_]+)/declare -Ag \1/g'
-    )
-
-    sed -r "${transforms[@]}" -i "$1"
-
-    if grep "\$%\." "$1"|grep -vP '^\s*#' ; then
-        out:fail "--- Some dot-array syntax did not convert ---"
-    fi
-}
 
 setup_build_dir() {
-    mkdir -p "$BUILDOUTD" || out:fail "Cannot create the output directory !"
-}
-
-load_project_environment() {
-    # preventer is not true || or if it is, bail
-    [[ "${NO_LOAD_BBUILDRC:-}" != true ]] || return 0
-
-    if [[ -f  "$BBUILD_ENV_FILE" ]]; then
-        . "$BBUILD_ENV_FILE" || out:fail "Error during inclusion of environment file."
-    fi
+    . <(args:use:local builddir -- "$@") ; 
+    mkdir -p "$builddir" || out:fail "Cannot create the output directory '$builddir'!"
 }
 
 # checktags { FILENAME | TAG SPEC }
@@ -1246,11 +1291,17 @@ checktags() {
 }
 
 build_script() {
-    . <(args:use:local infile -- "$@") ; 
+    . <(args:use:local infile ?outfile -- "$@") ; 
     local t_BBPATH="$(dirname "$infile"):$BBPATH"
 
     local tfname="$(basename "$infile")"
     local tfile="$BUILDOUTD/$tfname"
+
+    if [[ -n "$outfile" ]]; then
+        tfile="$outfile"
+    fi
+
+    setup_build_dir "$(dirname "$outfile")"
 
     out:info "Building $infile to $tfile"
 
@@ -1272,7 +1323,6 @@ do_shellcheck() {
             shellcheck -s bash "$1"
         else
             out:warn "You need to install shellcheck to perform syntax check"
-            SHELLCHECK=false
         fi
     fi
 }
@@ -1282,7 +1332,8 @@ arg_valueof() {
 }
 
 parse_flag() {
-    case "$1" in
+    . <(args:use:local flagstring -- "$@") ; 
+    case "$flagstring" in
     -C|--no-check)
         SHELLCHECK=false
         ;;
@@ -1290,7 +1341,7 @@ parse_flag() {
         SHELLCHECK=true
         ;;
     --out=*)
-        BUILDOUTD="$(arg_valueof "$1")"
+        BUILDOUTD="$(arg_valueof "$flagstring")"
         ;;
     --ignore-tags)
         IGNORETAGS=unsafe
@@ -1299,67 +1350,54 @@ parse_flag() {
         DOSETRELEASE=true
         ;;
     *)
-        out:fail "Unknown argument $1"
+        out:fail "Unknown argument '$flagstring'"
         ;;
     esac
 }
 
-build_files_list() {
-    for arg in "$@"; do
-        if [[ -f "$arg" ]]; then
-            debug:print "File ${#prompt_file_list[@]} for processing: $arg"
-            prompt_file_list[${#prompt_file_list[@]}]="$arg"
+parse_options() {
+    . <(args:use:local *bsource *bdest -- "$@") ; 
+    local option
 
-        elif [[ "$arg" =~ ^- ]]; then
-            parse_flag "$arg"
-
-        else
-            out:fail "No such file $arg"
+    while [[ -n "$*" ]]; do
+        if [[ ! "$1" =~ ^- ]]; then
+            break
         fi
+
+        parse_flag "$1"
+        shift
     done
+
+    bsource="${1:-}"; shift || out:fail "No input file specified."
+
+    ([[ -e "$bsource" ]] && [[ ! -d "$bsource" ]]) || out:fail "'$bsource' is not a file."
+
+    bdest="${1:-}"
+    if [[ -z "$bdest" ]]; then
+        bdest="$BUILDOUTD/$(basename "$bsource")"
+    fi
 }
 
 main() {
+    # args: [OPTIONS ...] SOURCE [DEST]
     if [[ "$*" =~ "--help syntax" ]]; then
         autohelp:print syntax
         exit 0
     fi
-    autohelp:check "$@"
+    autohelp:check-or-null "$@"
 
-    BBUILD_ENV_FILE=./bbuildrc
+    safe:glob on
 
     # --- Defaults
     : ${BBPATH=./}
     : ${BUILDOUTD=./build-outd}
     : ${SHELLCHECK=false}
 
-    # --- Settings file
-    load_project_environment
+    local buildsource builddest
 
-    # --- Command line
-    build_files_list "$@"
+    parse_options buildsource builddest "$@"
 
-    # ++++++++++++++++
-    # Now we process.
-
-    setup_build_dir
-
-    # BBFILES can be specified externally
-    # command line overrides this IFF specified
-    if [[ "${#prompt_file_list[@]}" -gt 0 ]]; then
-        debug:print "Prompt files list is ${prompt_file_list[*]}"
-        BBFILES=("${prompt_file_list[@]}")
-    fi
-
-    if [[ -z "${BBFILES[*]}" ]]; then
-        out:fail "No files to compile -- use a ./bbuildrc file to specify defaults (formerly bbuild_env)"
-    fi
-    
-    debug:print "And so, processing ${BBFILES[*]}"
-
-    for infile in "${BBFILES[@]}"; do
-        build_script "$infile"
-    done
+    build_script "$buildsource" "$builddest"
 }
 
 main "$@"

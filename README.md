@@ -8,13 +8,13 @@ For more on writing cleaner bash scripts, see the [clean writing notes](docs/wri
 
 ## What is this?
 
-Bash Builder is a tool to help writing bash scripts as multiple files, but combining and distributing as a single file.
+Bash Builder is a tool to help writing bash scripts as multiple files, but collating and distributing as a single file.
 
-Bash, as a language, lacks a usable mechanism to allow developing separate, loosely-related components in separate files, and building libraries of such files for re-use.
+Bash, as a language, lacks a usable mechanism to allow developing separate, loosely-related components in separate files, and building libraries of such files for re-use from searchable library paths.
 
 The Bash Builder project aims to provide such a structure:
 
-* combiner for assembling bash scripts using `#%include` statements
+* collater for assembling bash scripts using `#%include` statements
 * customizable search paths for inclusion of files
 * a default library of useful functions to make developing in bash clearer and cleaner
 * a utility to collect and bundle assets and external scripts into a single executable
@@ -28,12 +28,10 @@ Clone this repository, run the installation file.
 	git clone https://github.com/taikedz/bash-builder
 	cd bash-builder
 
-	# Run compatibility check and verify the libraries
-	./install.sh verify
-
-	# Actually perform installation
-	./install.sh
-
+    # Optionally, run a compatibility check before installing
+	bash src/compatibility.sh
+    
+    ./install.sh
 	# or,
 	#   sudo ./install.sh
 
@@ -47,11 +45,11 @@ If you installed as root, the commands are installed to `/usr/local/bin`, otherw
 
 ### `bbuild`
 
-The main combiner script that processes the scripts, each into a single executable file.
+The main collater script that processes the scripts, each into a single executable file.
 
-	bbuild FILES ...
+	bbuild SOURCEFILE [DESTFILE]
 
-Each file will be processed for `#%include` directives, and each file specified will produce its own standalone script.
+The source file will be processed for `#%include` directives, and produce an output file in `build-outd/` by default, or in the destination file if specified.
 
 Use the `#%include` directive in your scripts to import snippets from the builder path `$BBPATH`, or specify a file to import:
 
@@ -67,11 +65,11 @@ If you have `shellcheck` installed, you can also have it run against the compile
 
 See `bbuild --help` for more information.
 
-#### Syntax post-processor
+#### Extra Syntax !
 
 A syntactic post-processor is implemented as of 5.3, which seeks and replaces special strings starting with `$%`
 
-Specify `BBSYNTAX=off` in your `bashrc` file to disable syntax post-processing.
+Specify `BBSYNTAX=off` in your environment to disable syntax post-processing.
 
 **Function signatures**
 
@@ -90,54 +88,12 @@ copyfrom server me ./downloads /etc/hosts /home/user/backup.log
 
 If fewer arguments than the number named are provided at runtime, the script/subshell will exit, detailing which variable could not be assigned.
 
-**Argument consuming**
-
-You can also explicitly consume arguments in a less verbose way, when using strict mode. Whereas you might have needed to do the following previously:
-
-```sh
-set -eu
-
-myfunc() {
-    local arg="${1:-}"; shift || out:fail "Argument 'arg' not specified"
-}
-```
-
-you can now simply write the following to take care of the verbose section, and get an informative failure error naming the variable that could not be filled.
-
-```sh
-set -eu
-
-myfunc() {
-    local arg=$%1
-}
-```
-
-**Associative Array Dot Notation**
-
-Bash has some rudimentary support for associative arrays ; however it is fairly lax about the strings it accepts as "keys" and somewhat inconsistent with the rest of the array/variables syntax.
-
-The following notation thus is supported, limiting variables and "keys" to alphanumerical characters only. On the left, the `$%.` notation ; on the right, the resulting post-processing.
-
-    # Always needs declaring                              # Always needs declaring
-    $%.object                                    |        declare -Ag object
-
-    # Assign a property                                   # Assign a property
-    $%.object.property1=value                    |        object['property1']=value
-    $%.object.property2=stuff                    |        object['property2']=stuff
-
-    # Iterate over keys to get values                     # Iterate over keys to get values
-
-    for x in "$%.object[!]"; do                  |        for x in "${!object[@]}"; do
-        echo "$x --> $%.object[$x]"              |                echo "$x --> ${object[$x]}"
-    done                                                  done
-
-
 
 ### `bashdoc`
 
 Processor for a simple, general documentation format that allows you to insert documentation comments in your files, and extract them; documentation comments should be in [Markdown](https://daringfireball.net/projects/markdown/) - this allows them to simply be printed on-screen, or to file for further transformation into web pages.
 
-The documentation processor is very basic, but has the advantage of being extremely simple and would work on any file that uses a single `#` to denote comments - it doesn't really care so long as it finds documenmtation comments - the following produces a documentation section named TITLE, and a description. The "###" and "Usage:" tokens are necessary, and the "###/doc" terminates the doc comment.
+The documentation processor is very basic, but has the advantage of being extremely simple and would work on any file that uses a single `#` to denote comments - it doesn't really care so long as it finds documenmtation comments - the following produces a documentation section named TITLE, and a description. The `###` and `Usage:` tokens are necessary, and the `###/doc` terminates the doc comment.
 
 	### TITLE Usage:help
 	# some description
@@ -151,23 +107,7 @@ Without specifying any arguments, returns all modules along the BBPATH inclusino
 
 This prints the documentation for the `out.sh` script.
 
-### Default library
-
-The default library is hosted in a separate repository at [https://github.com/taikedz/bash-libs](https://github.com/taikedz/bash-libs) ; it is cloned locally during install.
-
-If you installed as root, the default library from `bash-libs/libs/` is installed to `/usr/local/lib/bbuild`, otherwise they are installed to `~/.local/lib/bbuild`
-
-You can configure `$BBPATH` in your `.bashrc` file to point to a series of custom locations for scripts, each path is separated by a colon `:`. By default, `BBPATH` is automatically set to `~/.local/lib/bbuild:/usr/local/lib/bbuild`.
-
-A typical use case would be to add your library directory from the current working directory:
-
-	export BBPATH=./mylibs:$HOME/.local/lib/bbuild:/usr/local/lib/bbuild
-
-You can do this in your `.bashrc` file, or in the current working directory as `./bbuild_env`
-
-In this case, scripts from the current directory's `mylibs/` are loaded preferably, then the user's general library folder, and finally the main library folder is checked.
-
-### Tagging
+### Message flags ("tagging")
 
 You can add tag directives to your files using the #%bbtags directive to cause messages to appear when files are included during build. Tags are processed in order of declaration, and use a prefix to determine the message type.
 
@@ -186,6 +126,18 @@ The following would cause two warning messages to appear during build:
 The following would cause a warning message to appear during build, then a failure message and exit.
 
 	#%bbtags w:deprecated e:too_dangerous
+
+## Default library
+
+The default library is hosted in a separate repository at [https://github.com/taikedz/bash-libs](https://github.com/taikedz/bash-libs) ; you will be offered a choice to add it during the installation process.
+
+You can configure `$BBPATH` in your `.bashrc` file to point to a series of custom locations for scripts, each path is separated by a colon `:`. By default, `BBPATH` is automatically set to `~/.local/lib/bbuild:/usr/local/lib/bbuild`.
+
+A typical use case would be to add your library directory from the current working directory:
+
+	export BBPATH="./mylibs:$HOME/.local/lib/bbuild:/usr/local/lib/bbuild"
+
+In this case, scripts from the current directory's `mylibs/` are loaded preferably, then the user's general library folder, and finally the main library folder is checked.
 
 ### Autohelp
 
@@ -206,6 +158,12 @@ Autohelp allows you to use documentation comments to produce help.
 When your script subsequently is run with the `--help` option, autohelp will *always* kick in, printing the help contents, and exiting.
 
 You can also call the help print routine from within your script using the `autohelp:print` command (does not cause the script to exit).
+
+### Debugging Tools
+
+`debug.sh` is part of the standard libararies, allowing you to print debug-level messages when the debug mode flag is set, as well as providing the ability to view and change variables of a runnin script.
+
+See `bashdoc std/debug.sh` for more info
 
 ### TarSH - Self Extracting and Running TAR files
 

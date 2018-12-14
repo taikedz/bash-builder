@@ -14,7 +14,10 @@
 #
 ###/doc
 
-#%include autohelp.sh out.sh searchpaths.sh runmain.sh
+#%include std/autohelp.sh
+#%include std/out.sh
+#%include std/searchpaths.sh
+#%include std/runmain.sh
 
 list_modules() {
     local thepath f
