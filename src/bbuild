@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION_NUM=5.4
+VERSION_NUM=6.0
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {
@@ -17,64 +17,29 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 #
 # Build a script using Bash Builder
 #
-# 	bbuild [OPTIONS ...] SCRIPTS ...
+# 	bbuild [OPTIONS ...] SOURCE [DEST]
+#
+# SOURCE - the source script
+# DEST - the destination file to build to
 #
 # Options
 # -------
 #
 #   -c
 #   --check
-#   	use shellcheck for subsequent files
+#   	use shellcheck
 #
 #   -C
 #   --no-check
-#   	don't use shellcheck for subsequent files
+#   	don't use shellcheck
 #
 #   --ignore-tags
 #   	Ignore tags in sourced files
 #
 #   --out=DIRECTORY
-#   	Specify the output directory
+#   	Specify the default output directory
+#   	Used if DEST is not specified.
 #
-# Environment
-# -----------
-#
-# You can set environment variables in your .bashrc file, or in a local `./bbuildrc` file, which is sourced once before commencing build.
-#
-# The order of precedence for options and environment variables is:
-#
-# * command line arguments
-# * `bbuildrc` settings
-# * local environment settings
-# * `.bashrc` settings
-#
-# Environment variables available, and their defaults:
-#
-# BBPATH -- a colon-separated list of directories wherein to find files for inclusion:
-#
-# 	BBPATH=$HOME/.local/lib/bbuild:/usr/local/lib/bbuild
-#
-#
-# SHELLCHECK -- "true" or "false", whether to run shellcheck on the finally built script
-#
-# 	SHELLCHECK=false
-#
-#
-# BUILDOUTD -- directory in which to place build results
-#
-#    BUILDOUTD=./build-outd
-#
-#
-# IGNORETAGS -- if set to "unsafe", ignores tags and their effects.
-#
-# 	(unset by default)
-#
-# BBFILES -- a list of files to build ; overridden by any files specified on the command line
-#   Surround these in parentheses to specify several scripts.
-#   This allows simply running "bbuild" to build specified project scripts
-#
-# 	BBFILES=(src/script1 src/script2 libs/support_script)
-# 
 #
 # Syntax post-processing
 # ----------------------
@@ -86,25 +51,19 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 #
 ###/doc
 
-#%include autohelp.sh
-#%include args.sh
-#%include out.sh 
-#%include debug.sh 
-#%include includefile2.sh 
-#%include bincheck.sh
+#%include std/safe.sh
+#%include std/autohelp.sh
+#%include std/args.sh
+#%include std/out.sh 
+#%include std/debug.sh 
+#%include std/includefile2.sh 
+#%include std/bincheck.sh
+#%include std/syntax-extensions.sh
+
 #%include syntax.sh
 
-setup_build_dir() {
-    mkdir -p "$BUILDOUTD" || out:fail "Cannot create the output directory !"
-}
-
-load_project_environment() {
-    # preventer is not true || or if it is, bail
-    [[ "${NO_LOAD_BBUILDRC:-}" != true ]] || return 0
-
-    if [[ -f  "$BBUILD_ENV_FILE" ]]; then
-        . "$BBUILD_ENV_FILE" || out:fail "Error during inclusion of environment file."
-    fi
+$%function setup_build_dir(builddir) {
+    mkdir -p "$builddir" || out:fail "Cannot create the output directory '$builddir'!"
 }
 
 # checktags { FILENAME | TAG SPEC }
@@ -141,11 +100,17 @@ checktags() {
     done
 }
 
-$%function build_script(infile) {
+$%function build_script(infile ?outfile) {
     local t_BBPATH="$(dirname "$infile"):$BBPATH"
 
     local tfname="$(basename "$infile")"
     local tfile="$BUILDOUTD/$tfname"
+
+    if [[ -n "$outfile" ]]; then
+        tfile="$outfile"
+    fi
+
+    setup_build_dir "$(dirname "$outfile")"
 
     out:info "Building $infile to $tfile"
 
@@ -167,7 +132,6 @@ do_shellcheck() {
             shellcheck -s bash "$1"
         else
             out:warn "You need to install shellcheck to perform syntax check"
-            SHELLCHECK=false
         fi
     fi
 }
@@ -176,8 +140,8 @@ arg_valueof() {
     echo "${1#*=}"
 }
 
-parse_flag() {
-    case "$1" in
+$%function parse_flag(flagstring) {
+    case "$flagstring" in
     -C|--no-check)
         SHELLCHECK=false
         ;;
@@ -185,7 +149,7 @@ parse_flag() {
         SHELLCHECK=true
         ;;
     --out=*)
-        BUILDOUTD="$(arg_valueof "$1")"
+        BUILDOUTD="$(arg_valueof "$flagstring")"
         ;;
     --ignore-tags)
         IGNORETAGS=unsafe
@@ -194,67 +158,53 @@ parse_flag() {
         DOSETRELEASE=true
         ;;
     *)
-        out:fail "Unknown argument $1"
+        out:fail "Unknown argument '$flagstring'"
         ;;
     esac
 }
 
-build_files_list() {
-    for arg in "$@"; do
-        if [[ -f "$arg" ]]; then
-            debug:print "File ${#prompt_file_list[@]} for processing: $arg"
-            prompt_file_list[${#prompt_file_list[@]}]="$arg"
+$%function parse_options(*bsource *bdest) {
+    local option
 
-        elif [[ "$arg" =~ ^- ]]; then
-            parse_flag "$arg"
-
-        else
-            out:fail "No such file $arg"
+    while [[ -n "$*" ]]; do
+        if [[ ! "$1" =~ ^- ]]; then
+            break
         fi
+
+        parse_flag "$1"
+        shift
     done
+
+    bsource="${1:-}"; shift || out:fail "No input file specified."
+
+    ([[ -e "$bsource" ]] && [[ ! -d "$bsource" ]]) || out:fail "'$bsource' is not a file."
+
+    bdest="${1:-}"
+    if [[ -z "$bdest" ]]; then
+        bdest="$BUILDOUTD/$(basename "$bsource")"
+    fi
 }
 
 main() {
+    # args: [OPTIONS ...] SOURCE [DEST]
     if [[ "$*" =~ "--help syntax" ]]; then
         autohelp:print syntax
         exit 0
     fi
-    autohelp:check "$@"
+    autohelp:check-or-null "$@"
 
-    BBUILD_ENV_FILE=./bbuildrc
+    safe:glob on
 
     # --- Defaults
     : ${BBPATH=./}
     : ${BUILDOUTD=./build-outd}
     : ${SHELLCHECK=false}
 
-    # --- Settings file
-    load_project_environment
+    local buildsource builddest
 
-    # --- Command line
-    build_files_list "$@"
+    parse_options buildsource builddest "$@"
 
-    # ++++++++++++++++
-    # Now we process.
-
-    setup_build_dir
-
-    # BBFILES can be specified externally
-    # command line overrides this IFF specified
-    if [[ "${#prompt_file_list[@]}" -gt 0 ]]; then
-        debug:print "Prompt files list is ${prompt_file_list[*]}"
-        BBFILES=("${prompt_file_list[@]}")
-    fi
-
-    if [[ -z "${BBFILES[*]}" ]]; then
-        out:fail "No files to compile -- use a ./bbuildrc file to specify defaults (formerly bbuild_env)"
-    fi
-    
-    debug:print "And so, processing ${BBFILES[*]}"
-
-    for infile in "${BBFILES[@]}"; do
-        build_script "$infile"
-    done
+    build_script "$buildsource" "$builddest"
 }
 
 main "$@"
