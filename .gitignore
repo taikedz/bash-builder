@@ -1,5 +1,5 @@
 .*.swp
 *~
 scratch/
-build-outd/
+bin-candidates/
 bash-libs
