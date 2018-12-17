@@ -648,6 +648,7 @@ main() {
 
     bindir="$HOME/.local/bin"
     libsdir="$HOME/.local/lib/bash-builder"
+    INSTALL_SOURCE=bin/
 
     parse_args "$@"
 
