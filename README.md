@@ -31,9 +31,9 @@ Clone this repository, run the installation file.
     # Optionally, run a compatibility check before installing
 	bash src/compatibility.sh
     
-    ./install.sh
+    ./install.sh [ --libs ]
 	# or,
-	#   sudo ./install.sh
+	#   sudo ./install.sh [ --libs ]
 
 Then open a new shell, or re-load your `~/.bashrc` file.
 

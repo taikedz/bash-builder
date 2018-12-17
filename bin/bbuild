@@ -9,7 +9,7 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
     exit
 }
 
-### Bash Builder 5 Usage:help
+### Bash Builder 6 Usage:help
 # 
 # This project is hosted at
 #   https://github.com/taikedz/bbuild
@@ -51,7 +51,7 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 #
 ###/doc
 
-##bash-libs: safe.sh @ 69724119 (2.0)
+##bash-libs: safe.sh @ 6421286a-uncommitted (2.0.1)
 
 ### Safe mode Usage:bbuild
 #
@@ -114,7 +114,7 @@ safe:glob() {
         ;;
     esac
 }
-##bash-libs: tty.sh @ 69724119 (2.0)
+##bash-libs: tty.sh @ 6421286a-uncommitted (2.0.1)
 
 tty:is_ssh() {
     [[ -n "$SSH_TTY" ]] || [[ -n "$SSH_CLIENT" ]] || [[ "$SSH_CONNECTION" ]]
@@ -124,7 +124,7 @@ tty:is_pipe() {
     [[ ! -t 1 ]]
 }
 
-##bash-libs: colours.sh @ 69724119 (2.0)
+##bash-libs: colours.sh @ 6421286a-uncommitted (2.0.1)
 
 ### Colours for terminal Usage:bbuild
 # A series of shorthand colour flags for use in outputs, and functions to set your own flags.
@@ -277,7 +277,7 @@ colours:auto() {
 
 colours:auto
 
-##bash-libs: out.sh @ 69724119 (2.0)
+##bash-libs: out.sh @ 6421286a-uncommitted (2.0.1)
 
 ### Console output handlers Usage:bbuild
 #
@@ -364,7 +364,7 @@ function out:fail {
 function out:error {
     echo "${CBRED}ERROR: ${CRED}$*$CDEF" 1>&2
 }
-##bash-libs: syntax-extensions.sh @ 69724119 (2.0)
+##bash-libs: syntax-extensions.sh @ 6421286a-uncommitted (2.0.1)
 
 ### Syntax Extensions Usage:syntax
 #
@@ -477,7 +477,7 @@ args:use:local() {
     syntax-extensions:use:local "$@"
 }
 
-##bash-libs: autohelp.sh @ 69724119 (2.0)
+##bash-libs: autohelp.sh @ 6421286a-uncommitted (2.0.1)
 
 ### Autohelp Usage:bbuild
 #
@@ -675,7 +675,7 @@ autohelp:check:section() {
         fi
     done
 }
-##bash-libs: patterns.sh @ 69724119 (2.0)
+##bash-libs: patterns.sh @ 6421286a-uncommitted (2.0.1)
 
 ### Useful patterns Usage:bbuild
 #
@@ -700,7 +700,7 @@ export PAT_cvar='^[a-zA-Z_][a-zA-Z0-9_]*$'
 export PAT_filename='^[a-zA-Z0-9_.-]$'
 export PAT_email="$PAT_filename@$PAT_filename.$PAT_cvar"
 
-##bash-libs: args.sh @ 69724119 (2.0)
+##bash-libs: args.sh @ 6421286a-uncommitted (2.0.1)
 
 ### args Usage:bbuild
 #
@@ -841,7 +841,7 @@ args:after() {
     RETARR_ARGSAFTER=("$@")
 }
 
-##bash-libs: debug.sh @ 69724119 (2.0)
+##bash-libs: debug.sh @ 6421286a-uncommitted (2.0.1)
 
 ### Debug lib Usage:bbuild
 #
@@ -988,7 +988,7 @@ debug:_break_dump() {
     fi
 }
 
-##bash-libs: searchpaths.sh @ 69724119 (2.0)
+##bash-libs: searchpaths.sh @ 6421286a-uncommitted (2.0.1)
 
 # FIXME - set function signature in head of help
 ### searchpaths:file_from PATHDEF FILE Usage:bbuild
@@ -1024,7 +1024,7 @@ function searchpaths:file_from {
     return 1
 }
 
-##bash-libs: includefile2.sh @ 69724119 (2.0)
+##bash-libs: includefile2.sh @ 6421286a-uncommitted (2.0.1)
 
 ### File Inclusion Usage:bbuild
 # Library for including (once) or inserting (any time called) external files ontents
@@ -1136,7 +1136,7 @@ includefile:_cat_once() {
 includefile:cleanup() {
     rm ./._include-*
 }
-##bash-libs: bincheck.sh @ 69724119 (2.0)
+##bash-libs: bincheck.sh @ 6421286a-uncommitted (2.0.1)
 
 ### bincheck:get COMMANDS ... Usage:bbuild
 #

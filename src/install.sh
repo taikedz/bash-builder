@@ -6,15 +6,12 @@
 #
 # Install the build utilities.
 #
-# This script can pull in the satndard library and install it for you.
-#
 # OPTIONS
 #
+# --libs
 # --libs=TARGET
-#   Install the target version of the libraries. By default, 'latest-release'
-#   
-# --no-libs
-#   Do not offer to install standard library
+#   Also install the target version of the libraries.
+#   If target is not specified, install latest release version.
 #
 # --rc
 #   Install from the release candidates directory instead of release directory
@@ -31,7 +28,6 @@ main() {
     bindir="$HOME/.local/bin"
     libsdir="$HOME/.local/lib/bash-builder"
 
-    LIBS_TARGET=latest-release
     parse_args "$@"
 
     if [[ "$UID" = 0 ]]; then
@@ -49,7 +45,6 @@ main() {
     ensure_bbpath
 
     out:info "Installed to '$bindir'."
-    out:info "You may need to install libraries separately."
 
     install_libs
 }
@@ -62,8 +57,8 @@ parse_args() {
         --libs=*)
             LIBS_TARGET="${item#*=}"
             ;;
-        --no-libs)
-            LIBS_TARGET=""
+        --libs)
+            LIBS_TARGET=latest-release
             ;;
         --rc)
             INSTALL_SOURCE=bin-candidates/
@@ -77,21 +72,16 @@ parse_args() {
 
 install_libs() {
     local reply
-    if [[ -z "$LIBS_TARGET" ]]; then
+    if [[ -z "${LIBS_TARGET:-}" ]]; then
+        out:warn "You may need to install additional bash-builder libraries separately."
         return 0
-    fi
-
-    read -p "(Re)Install standard libraries? Y/n> " reply
-    if [[ ! "$reply" =~ ^(y|Y|yes|YES|)$ ]]; then
-        out:warn "Skipped installing libraries."
-        return
     fi
 
     if [[ ! -e "bash-libs" ]]; then
         git clone https://github.com/taikedz/bash-libs
     fi
 
-    "bash-libs/install.sh" "$LIBS_TARGET"
+    "bash-libs/install.sh" "${LIBS_TARGET:-}"
 }
 
 ensure_bbpath() {

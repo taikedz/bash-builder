@@ -6,22 +6,19 @@
 #
 # Install the build utilities.
 #
-# This script can pull in the satndard library and install it for you.
-#
 # OPTIONS
 #
+# --libs
 # --libs=TARGET
-#   Install the target version of the libraries. By default, 'latest-release'
-#   
-# --no-libs
-#   Do not offer to install standard library
+#   Also install the target version of the libraries.
+#   If target is not specified, install latest release version.
 #
 # --rc
 #   Install from the release candidates directory instead of release directory
 #
 ###/doc
 
-##bash-libs: safe.sh @ 6b9e7437 (after 2.0)
+##bash-libs: safe.sh @ 6421286a-uncommitted (2.0.1)
 
 ### Safe mode Usage:bbuild
 #
@@ -84,7 +81,7 @@ safe:glob() {
         ;;
     esac
 }
-##bash-libs: tty.sh @ 6b9e7437 (after 2.0)
+##bash-libs: tty.sh @ 6421286a-uncommitted (2.0.1)
 
 tty:is_ssh() {
     [[ -n "$SSH_TTY" ]] || [[ -n "$SSH_CLIENT" ]] || [[ "$SSH_CONNECTION" ]]
@@ -94,7 +91,7 @@ tty:is_pipe() {
     [[ ! -t 1 ]]
 }
 
-##bash-libs: colours.sh @ 6b9e7437 (after 2.0)
+##bash-libs: colours.sh @ 6421286a-uncommitted (2.0.1)
 
 ### Colours for terminal Usage:bbuild
 # A series of shorthand colour flags for use in outputs, and functions to set your own flags.
@@ -247,7 +244,7 @@ colours:auto() {
 
 colours:auto
 
-##bash-libs: out.sh @ 6b9e7437 (after 2.0)
+##bash-libs: out.sh @ 6421286a-uncommitted (2.0.1)
 
 ### Console output handlers Usage:bbuild
 #
@@ -334,7 +331,7 @@ function out:fail {
 function out:error {
     echo "${CBRED}ERROR: ${CRED}$*$CDEF" 1>&2
 }
-##bash-libs: syntax-extensions.sh @ 6b9e7437 (after 2.0)
+##bash-libs: syntax-extensions.sh @ 6421286a-uncommitted (2.0.1)
 
 ### Syntax Extensions Usage:syntax
 #
@@ -447,7 +444,7 @@ args:use:local() {
     syntax-extensions:use:local "$@"
 }
 
-##bash-libs: autohelp.sh @ 6b9e7437 (after 2.0)
+##bash-libs: autohelp.sh @ 6421286a-uncommitted (2.0.1)
 
 ### Autohelp Usage:bbuild
 #
@@ -652,7 +649,6 @@ main() {
     bindir="$HOME/.local/bin"
     libsdir="$HOME/.local/lib/bash-builder"
 
-    LIBS_TARGET=latest-release
     parse_args "$@"
 
     if [[ "$UID" = 0 ]]; then
@@ -670,7 +666,6 @@ main() {
     ensure_bbpath
 
     out:info "Installed to '$bindir'."
-    out:info "You may need to install libraries separately."
 
     install_libs
 }
@@ -683,8 +678,8 @@ parse_args() {
         --libs=*)
             LIBS_TARGET="${item#*=}"
             ;;
-        --no-libs)
-            LIBS_TARGET=""
+        --libs)
+            LIBS_TARGET=latest-release
             ;;
         --rc)
             INSTALL_SOURCE=bin-candidates/
@@ -698,21 +693,16 @@ parse_args() {
 
 install_libs() {
     local reply
-    if [[ -z "$LIBS_TARGET" ]]; then
+    if [[ -z "${LIBS_TARGET:-}" ]]; then
+        out:warn "You may need to install additional bash-builder libraries separately."
         return 0
-    fi
-
-    read -p "(Re)Install standard libraries? Y/n> " reply
-    if [[ ! "$reply" =~ ^(y|Y|yes|YES|)$ ]]; then
-        out:warn "Skipped installing libraries."
-        return
     fi
 
     if [[ ! -e "bash-libs" ]]; then
         git clone https://github.com/taikedz/bash-libs
     fi
 
-    "bash-libs/install.sh" "$LIBS_TARGET"
+    "bash-libs/install.sh" "${LIBS_TARGET:-}"
 }
 
 ensure_bbpath() {

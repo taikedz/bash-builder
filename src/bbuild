@@ -9,7 +9,7 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
     exit
 }
 
-### Bash Builder 5 Usage:help
+### Bash Builder 6 Usage:help
 # 
 # This project is hosted at
 #   https://github.com/taikedz/bbuild
