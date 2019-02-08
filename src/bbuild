@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION_NUM=6.0
+VERSION_NUM=6.0.3
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {
@@ -54,9 +54,9 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 #%include std/safe.sh
 #%include std/autohelp.sh
 #%include std/args.sh
-#%include std/out.sh 
-#%include std/debug.sh 
-#%include std/includefile2.sh 
+#%include std/out.sh
+#%include std/debug.sh
+#%include std/includefile2.sh
 #%include std/bincheck.sh
 #%include std/syntax-extensions.sh
 
