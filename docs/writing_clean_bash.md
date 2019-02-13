@@ -225,7 +225,6 @@ Use safe dereference notation `${VARNAME:-}` to access variables that might not 
 		if [[ "${MYAPP_help:-}" = true ]]; then
 			echo "Help !!"
 		fi
-			
 	}
 
 	myapp:main "$@"
@@ -262,10 +261,10 @@ Copying an array is a little more involved
 
 	RESULT_ARRAY=("${myarray[@]}")
 
-* `"${myarray[@]}"`
-* The parentheses `()` declare the content as an array
+* `"${myarray[@]}"` expands *as an array*
+* The parentheses `()` declare the content as an array, for the assignment
 
-Functions can only output string data - as such, returning any arrays whose members contain whitespace is not possible, and instead, using a global variable is the only way available.
+Functions can only output string data - as such, returning any arrays whose members contain whitespace is not possible -- instead, using "pointer"-like variables is the preferred way.
 
 ### Use pointer variables
 
@@ -279,17 +278,24 @@ The `declare -n` keyword allows creating variables that act as pointers to other
         for x in "${myvar[@]}"; do
             echo "$x"
         done
+
         # prints "one", "two" and "three" on their respective lines
         # due to the change by change_array
     }
 
     change_array() {
-        declare -n inner="$1" # inner becomes a pointer to the name specified as argument
+        declare -n p_inner="$1" # inner becomes a pointer to the name specified as argument
 
         # We can now affect the varaible from further up the stack.
 
-        inner=(one two three)
+        p_inner=(one two three)
     }
+
+    outer
+
+Note that the `p_inner` variable must be different from the vairable it will be pointing to. The above resolves as `declare -n p_inner=myvar` since `myvar` is passed as the name to point to.
+
+If `outer()` also happened to use the name `p_inner` (for argument's sake), and called `change_array p_inner`, the `change_array()` command would expand to `declare -n p_inner=p_inner` creating a self-reference. Bash does try to resolve this neatly, but issues warnings, and does not guarantee it resolved correctly.
 
 ## Separate into files
 

@@ -6,9 +6,9 @@ The following are notes on what makes Bash Builder a great tool to augment your 
 
 ## Lengthy code and boilerplate
 
-In the previous guide, I outlined the need to use safe mode, functions, and local named variables. That trifecta of recommenations leads to situations with heavy buioler plate in every function, like so:
+In the previous guide, I outlined the need to use safe mode, functions, and local named variables. That trifecta of recommenations leads to situations with heavy boilerplate in every function, like so:
 
-    #!/usr/bin/env
+    #!/usr/bin/env bash
 
     set -eu
 
@@ -20,7 +20,7 @@ In the previous guide, I outlined the need to use safe mode, functions, and loca
             code=100
         fi
 
-        echo "$*"
+        echo "$*" >&2
         exit $code
     }
 
@@ -45,7 +45,7 @@ Some items to note:
     * It is actually rather fancy, checking for an exit code to use
 2. The  couple of lines at the top of the `clone-or-update` function to get the function arguments into named variables
     * along with warning code for when they are not specified
-3. The safe mode is incomplete - it is missing pipefail, glog and inline whitespace splitting guards
+3. The safe mode is incomplete - it is missing pipefail, glob and inline whitespace splitting guards
 
 This also would be the start of a shorthands utility ([hint hint](https://github.com/taikedz/git-shortcuts)) that is likely to grow over time - to a file of tremendous size.
 
@@ -63,16 +63,8 @@ The following is the equivalent script, written with the assistance of Bash Buil
 
     #!/usr/bin/env bash
 
-    ### Git Clone/Update usage:help
-    # Clone or update a repository
-    #
-    #   gcu.sh URL FOLDER
-    #
-    ###/doc
-
     #%include std/safe.sh
     #%include std/out.sh
-    #%include std/autohelp.sh
 
     $%function gitdemo:clone-or-update(giturl destination) {
         if [[ -e "$destination" ]]; then
@@ -82,16 +74,14 @@ The following is the equivalent script, written with the assistance of Bash Buil
         fi
     }
 
-    autohelp:check-or-null "$@"
     gitdemo:clone-or-update "$@"
 
 Notice now:
 
 1. Using `safe.sh` ensures the full standard safety net is applied.
 2. `out.sh` supplies some output control utilities, of which the `out:fail` function - which also optionally takes a status code as first argument
-3. `autohelp.sh` converts the help comments at the top of the file into a printable help section, which can be seen when running the script with the `--help` flag
-4. The `$%function` marker enables use of the syntax extension allowing named arguments in function declarations
-5. If we remove the help-related content... the code is significantly shorter now !
+3. The `$%function` marker enables use of the syntax extension allowing named arguments in function declarations
+4. ... and the code is significantly shorter now !
 
 ## Debugging with introspection
 
