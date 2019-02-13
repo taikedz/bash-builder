@@ -18,7 +18,7 @@ Any time the Tar Script is run, it first checks to see if a corresponding unpack
 
 The Tar Script can be forcibly re-extracted by running it with the single argument `:unpack` , e.g.
 
-	my-app.tgz.sh :unpack
+    my-app.tgz.sh :unpack
 
 # Example
 
@@ -28,37 +28,39 @@ The following is an example of
 * getting an asset file
 * running in the current working directory
 
-
-	mkdir my-demo ; cd my-demo
-
-	mkdir bin
-	mkdir assets
-
-	# Create some asset
-	echo "Hello there" > assets/other.txt
-
-	# Create main script, and use the asset
-	cat <<'EOF' > bin/main.sh
-	echo "Running from $TARWD"
-	echo "Running in $PWD"
-	echo "Path includes $PATH"
-	echo
-
-	echo "--- Internal asset ---"
-	cat "$TARWD/assets/other.txt"
-	echo
-
-	echo "--- Local listing ---"
-	ls
-	echo
-	EOF
+Script:
 
 
+    mkdir my-demo ; cd my-demo
 
-	# Build the runnable tar - it will be named after the containing directory (here, `my-demo`)
-	tarshc bin/ assets/
+    mkdir bin
+    mkdir assets
 
-	./my-demo.tgz.sh
+    # Create some asset
+    echo "Hello there" > assets/other.txt
+
+    # Create main script, and use the asset
+    cat <<'EOF' > bin/main.sh
+    echo "Running from $TARWD"
+    echo "Running in $PWD"
+    echo "Path includes $PATH"
+    echo
+
+    echo "--- Internal asset ---"
+    cat "$TARWD/assets/other.txt"
+    echo
+
+    echo "--- Local listing ---"
+    ls
+    echo
+    EOF
+
+
+
+    # Build the runnable tar - it will be named after the containing directory (here, `my-demo`)
+    tarshc bin/ assets/
+
+    ./my-demo.tgz.sh
 
 
 
