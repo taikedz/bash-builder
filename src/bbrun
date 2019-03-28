@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+### Bash Builder Runner Usage:help
+#
+# Run a Bash Builder script directly without pre-compiling.
+#
+# Suitable for use with a shebang line.
+#
+# Incompatible with 'runmain'
+#
+# Set 'DEBUG_mode=true' to see BBPATH used.
+#
+###/doc
+
+BBRUN_VERSION=1.0
+
+#%include std/syntax-extensions.sh
+#%include std/abspath.sh
+#%include std/debug.sh
+#%include std/colours.sh
+
+removebuilt() {
+    rm "$BUILTSCR" "$BUILDMESSAGES"
+}
+
+rewrite_shebang() {
+    sed '1 s/bbrun/bash/g' -i "$BUILTSCR"
+}
+
+check_build_failure() {
+    if [[ "$1" != 0 ]]; then
+        echo -n "$CRED"
+        cat "$BUILDMESSAGES"
+        echo -n "$CDEF"
+
+        exit 1
+    fi
+}
+
+$%function bbrun:main(bbscript) {
+    local tempscr thisname
+
+    # Use absolute path so that built script is callable predictably
+    thisname="$(abspath:path "$bbscript")"
+    BUILTSCR="$(mktemp "${thisname}-XXXX")"
+    BUILDMESSAGES="$(mktemp)"
+
+    debug:print "Building dynamically | BBPATH => $BBPATH"
+
+    bbuild "$bbscript" "$BUILTSCR" &> "$BUILDMESSAGES"
+    BUILDRESULT=$?
+
+    trap removebuilt exit
+    check_build_failure "$BUILDRESULT"
+
+
+    rewrite_shebang
+
+    "$BUILTSCR" "$@"
+}
+
+bbrun:main "$@"

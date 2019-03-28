@@ -10,6 +10,7 @@ fi
 status=0
 
 bin/bbuild src/bbuild                  ; status=$((status+$?))
+bin/bbuild src/bbrun                   ; status=$((status+$?))
 bin/bbuild src/bashdoc                 ; status=$((status+$?))
 bin/bbuild src/tarshc                  ; status=$((status+$?))
 bin/bbuild src/install.sh ./install.sh ; status=$((status+$?))

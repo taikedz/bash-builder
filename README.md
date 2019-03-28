@@ -88,6 +88,25 @@ copyfrom server me ./downloads /etc/hosts /home/user/backup.log
 
 If fewer arguments than the number named are provided at runtime, the script/subshell will exit, detailing which variable could not be assigned.
 
+### `bbrun`
+
+An executable that allows you to directly run scripts written for bash builder without a compilation step.
+
+`bbrun` automatically compiles the script to a local temp file, and runs it immediately.
+
+For example, the following script file can be made executable and run directly:
+
+```bash
+#!/usr/bin/env bbrun
+
+$%function main(arg1 arg2) {
+    out:info "You succesfully supplied $arg1 and $arg2"
+}
+
+main "$@"
+```
+
+This relies on the host having `bash-libs` installed and accessible to the user.
 
 ### `bashdoc`
 

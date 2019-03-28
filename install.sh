@@ -18,7 +18,7 @@
 #
 ###/doc
 
-##bash-libs: safe.sh @ 9d200ab4 (2.0.6)
+##bash-libs: safe.sh @ ab570026 (2.1.5)
 
 ### Safe mode Usage:bbuild
 #
@@ -80,7 +80,7 @@ safe:glob() {
 
 set -eufo pipefail
 safe:space-split off
-##bash-libs: tty.sh @ 9d200ab4 (2.0.6)
+##bash-libs: tty.sh @ ab570026 (2.1.5)
 
 tty:is_ssh() {
     [[ -n "$SSH_TTY" ]] || [[ -n "$SSH_CLIENT" ]] || [[ "$SSH_CONNECTION" ]]
@@ -90,7 +90,7 @@ tty:is_pipe() {
     [[ ! -t 1 ]]
 }
 
-##bash-libs: colours.sh @ 9d200ab4 (2.0.6)
+##bash-libs: colours.sh @ ab570026 (2.1.5)
 
 ### Colours for terminal Usage:bbuild
 # A series of shorthand colour flags for use in outputs, and functions to set your own flags.
@@ -243,7 +243,7 @@ colours:auto() {
 
 colours:auto
 
-##bash-libs: out.sh @ 9d200ab4 (2.0.6)
+##bash-libs: out.sh @ ab570026 (2.1.5)
 
 ### Console output handlers Usage:bbuild
 #
@@ -331,7 +331,7 @@ function out:error {
     echo "${CBRED}ERROR: ${CRED}$*$CDEF" 1>&2
 }
 
-##bash-libs: syntax-extensions.sh @ 9d200ab4 (2.0.6)
+##bash-libs: syntax-extensions.sh @ ab570026 (2.1.5)
 
 ### Syntax Extensions Usage:syntax
 #
@@ -445,7 +445,7 @@ args:use:local() {
     syntax-extensions:use:local "$@"
 }
 
-##bash-libs: autohelp.sh @ 9d200ab4 (2.0.6)
+##bash-libs: autohelp.sh @ ab570026 (2.1.5)
 
 ### Autohelp Usage:bbuild
 #
@@ -662,6 +662,7 @@ main() {
     mkdir -p "$libsdir"
 
     cp "$INSTALL_SOURCE"/bbuild \
+        "$INSTALL_SOURCE"/bbrun \
         "$INSTALL_SOURCE"/bashdoc \
         "$INSTALL_SOURCE"/tarshc \
         "$bindir/"

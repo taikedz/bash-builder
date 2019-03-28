@@ -40,6 +40,7 @@ main() {
     mkdir -p "$libsdir"
 
     cp "$INSTALL_SOURCE"/bbuild \
+        "$INSTALL_SOURCE"/bbrun \
         "$INSTALL_SOURCE"/bashdoc \
         "$INSTALL_SOURCE"/tarshc \
         "$bindir/"
