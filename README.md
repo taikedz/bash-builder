@@ -92,12 +92,14 @@ If fewer arguments than the number named are provided at runtime, the script/sub
 
 An executable that allows you to directly run scripts written for bash builder without a compilation step.
 
-`bbrun` automatically compiles the script to a local temp file, and runs it immediately.
+`bbrun` compiles the script and runs it immediately, and is suitable for a shebang line.
 
 For example, the following script file can be made executable and run directly:
 
 ```bash
 #!/usr/bin/env bbrun
+
+#%include std/out.sh
 
 $%function main(arg1 arg2) {
     out:info "You succesfully supplied $arg1 and $arg2"
@@ -106,7 +108,10 @@ $%function main(arg1 arg2) {
 main "$@"
 ```
 
-This relies on the host having `bash-libs` installed and accessible to the user.
+Limitations:
+
+* This relies on the host having `bash-libs` installed and accessible to the user.
+* Cannot be used on scripts using `std/this.sh-->this:bindir` or anything relying on the location of `$0` (the running script itself)
 
 ### `bashdoc`
 
