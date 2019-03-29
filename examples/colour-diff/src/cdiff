@@ -18,10 +18,10 @@ validf() {
 }
 
 if [[ "${1:-}" = - ]]; then
-    colorize # process stdin
+    cdiff:colorize # process stdin
 else
     validf "${1:-}"
     validf "${2:-}"
 
-    cdiff "$@"
+    cdiff:cdiff "$@"
 fi
