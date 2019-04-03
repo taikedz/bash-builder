@@ -8,21 +8,20 @@ set -euo pipefail
 #
 # Suitable for use with a shebang line.
 #
-#   bbrun SCRIPT [/lt] SCRIPT_ARGS ...
+#   bbrun SCRIPT SCRIPT_ARGS ...
 #
-# If run normally, uses a temp file with the same name as
-#  the original script in /tmp
+# bbrun uses a temp file in ~/.local/tmp with the same name as
+#  the original script.
 #
-# If run with the "/lt" modifier, uses a temp file in the same
-#  directory as the original script. This allows use of
-#  `$(dirname "$0")` references, but makes the use incompatible
-#  with `runmain`
+# When the compiled script is run, an environment variable
+#  `BBRUN_SCRIPT` contains the path of the original script (use this
+#  instead of $0).
 #
 # Set environment variable `DEBUG_mode=true` to see the BBPATH and build target
 #
 ###/doc
 
-BBRUN_VERSION=1.1
+BBRUN_VERSION=1.2
 
 ##bash-libs: tty.sh @ ab570026 (2.1.5)
 
@@ -812,7 +811,9 @@ removebuilt() {
 }
 
 rewrite_shebang() {
-    sed '1 s/bbrun/bash/g' -i "$BUILTSCR"
+    sed -r -e '1 s|^#!.+$|#!/usr/bin/env bash|g' -i "$BUILTSCR"
+
+    debug:print "Shebang: $(head -n 1 "$BUILTSCR")"
 }
 
 check_build_failure() {
@@ -825,40 +826,43 @@ check_build_failure() {
     fi
 }
 
+make_private_script() {
+    touch "$BUILTSCR"
+    chmod 700 "$BUILTSCR"
+}
+
 bbrun:main() {
-    . <(args:use:local bbscript ?option -- "$@") ; 
-    local tempscr thisname
+    . <(args:use:local bbscript -- "$@") ; 
+    local tempscr build_result BBRUN_SCRIPT
+    build_result=0
+
+    tmpdir="$HOME/.local/tmp"
+
+    [[ -e "$tmpdir" ]] ||
+        mkdir -p "$tmpdir"
 
     # Use absolute path so that built script is callable predictably
-    thisname="$(abspath:path "$bbscript")"
-    BUILTSCR="/tmp/$(basename "$bbscript")"
+    export BBRUN_SCRIPT="$(abspath:path "$bbscript")"
+    BUILTSCR="$tmpdir/$(basename "$bbscript")"
 
-    # Track script arguments separately so that we can have a single front option on bbrun
-    S_ARGS=(:)
+    ([[ -e "$BBRUN_SCRIPT" ]] && [[ ! -d "$BBRUN_SCRIPT" ]]) || out:fail "'$bbscript' is not a file."
 
-    if [[ "$option" = /lt ]]; then
-        BUILTSCR="$(mktemp "${thisname}-XXXX")"
-        S_ARGS=(: "$@")
-
-    elif [[ -n "$option" ]]; then
-        S_ARGS=(: "$option" "$@")
-    fi
+    make_private_script
 
     BUILDMESSAGES="$(mktemp)"
 
     debug:print "Building dynamically | BBPATH => $BBPATH"
     debug:print "Building to [$BUILTSCR]"
 
-    bbuild "$bbscript" "$BUILTSCR" &> "$BUILDMESSAGES"
-    BUILDRESULT=$?
+    bbuild "$bbscript" "$BUILTSCR" &> "$BUILDMESSAGES" || build_result=$?
+
+    chmod 700 "$BUILTSCR" # re-apply the perms, because bbuild will set 755 as part of the build
 
     trap removebuilt exit
-    check_build_failure "$BUILDRESULT"
-
+    check_build_failure "$build_result"
 
     rewrite_shebang
-
-    "$BUILTSCR" "${S_ARGS[@]}"
+    "$BUILTSCR" "$@"
 }
 
 autohelp:check-or-null "$@"

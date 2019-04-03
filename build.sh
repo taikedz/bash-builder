@@ -30,7 +30,7 @@ _build() {
 
 SCRIPTS=(bbuild bbrun bashdoc tarshc)
 
-if [[ -n "$*" ]]; then # Build specific
+if [[ -n "$*" ]] && [[ ! "$*" = --release ]]; then # Build specific
     for buildsrc in "${SCRIPTS[@]}"; do
         if _has "$buildsrc" "$@"; then
             _build "src/$buildsrc"
