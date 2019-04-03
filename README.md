@@ -1,6 +1,6 @@
 # Bash Builder
 
-(C) 2017-2018 Tai Kedzierski, provided under GNU General Public License v3.0.
+(C) 2017-2019 Tai Kedzierski, provided under GNU General Public License v3.0.
 
 A toolset for managing bash snippets/libraries, managing in-line documentation, and bundling assets into single executables.
 
@@ -18,8 +18,10 @@ The Bash Builder project aims to provide such a structure:
 * customizable search paths for inclusion of files
 * a default library of useful functions to make developing in bash clearer and cleaner
 * a utility to collect and bundle assets and external scripts into a single executable
+* added syntax sugars (e.g. variable names in function signatures)
+* utility to execute bash-builder-augmented scripts
 
-Note that this is specifically intended for use with GNU bash - strict POSIX `sh` usage is not supported; run the copmatibility check using `bash src/compatibility.sh` to check that all tools on the system match the required versions.
+Note that the tools are specifically written against GNU bash and GNU coreutils - strict POSIX `sh` usage is not supported; run the compatibility check using `bash src/compatibility.sh` to check that all tools on the system match the required versions.
 
 ## Installing
 
@@ -53,13 +55,31 @@ The source file will be processed for `#%include` directives, and produce an out
 
 Use the `#%include` directive in your scripts to import snippets from the builder path `$BBPATH`, or specify a file to import:
 
+Assuming a folder structure like
+
+    ./
+      |
+      |_ main.sh
+      |
+      |_ morescript.sh
+
+You can write this in `main.sh`:
+
 	# Include some handy message printing functions
-	#%include out.sh
+    #  installed on $BBPATH
+
+	#%include std/out.sh
 
 	# Include a file on a path in the same directory as the specified script
-	#%include src/morescript.sh
+	#%include morescript.sh
 
-The output will be placed in a `bbuild-outd` directory (or, whatever directory is specified by `$BUILDOUTD`).
+    # ... (rest of your script here ) ...
+
+You can run
+
+    bbuild main.sh bin/myscript.sh
+
+to build your script to the bin/ directory as a `myscript.sh` executable.
 
 If you have `shellcheck` installed, you can also have it run against the compiled script.
 
@@ -67,13 +87,11 @@ See `bbuild --help` for more information.
 
 #### Extra Syntax !
 
-A syntactic post-processor is implemented as of 5.3, which seeks and replaces special strings starting with `$%`
-
-Specify `BBSYNTAX=off` in your environment to disable syntax post-processing.
+A syntactic post-processor seeks and replaces macro strings starting with `$%`. Specify `BBSYNTAX=off` in your environment to disable this syntax post-processing.
 
 **Function signatures**
 
-You can now declare functions using variable names in the function signature:
+You can declare functions using variable names in the function signature:
 
 ```sh
 $%function copyfrom(host user dest) {
@@ -83,7 +101,7 @@ $%function copyfrom(host user dest) {
 }
 
 # The first three arguments are assigned to the names ; the rest remain available in "$@"
-copyfrom server me ./downloads /etc/hosts /home/user/backup.log
+copyfrom server.example.com myusername ./downloads /etc/hosts /home/user/backup.log
 ```
 
 If fewer arguments than the number named are provided at runtime, the script/subshell will exit, detailing which variable could not be assigned.
@@ -128,9 +146,9 @@ By default, `bashdoc` will try to find and print any documentation comment tagge
 
 Without specifying any arguments, returns all modules along the BBPATH inclusino paths. Example usage:
 
-	bashdoc out.sh
+	bashdoc std/out.sh
 
-This prints the documentation for the `out.sh` script.
+This prints the documentation for the first `std/out.sh` script found on the `$BBPATH` path.
 
 ### Message flags ("tagging")
 
@@ -156,13 +174,13 @@ The following would cause a warning message to appear during build, then a failu
 
 The default library is hosted in a separate repository at [https://github.com/taikedz/bash-libs](https://github.com/taikedz/bash-libs) ; you will be offered a choice to add it during the installation process.
 
-You can configure `$BBPATH` in your `.bashrc` file to point to a series of custom locations for scripts, each path is separated by a colon `:`. By default, `BBPATH` is automatically set to `~/.local/lib/bbuild:/usr/local/lib/bbuild`.
+You can configure `$BBPATH` in your `.bashrc` file to point to a series of custom locations for scripts, each path is separated by a colon `:`. By default, `BBPATH` is automatically set to `~/.local/lib/bash-builder:/usr/local/lib/bash-builder`.
 
 A typical use case would be to add your library directory from the current working directory:
 
-	export BBPATH="./mylibs:$HOME/.local/lib/bbuild:/usr/local/lib/bbuild"
+	export BBPATH="./my-extra-libs:$HOME/.local/lib/bash-builder:/usr/local/lib/bash-builder"
 
-In this case, scripts from the current directory's `mylibs/` are loaded preferably, then the user's general library folder, and finally the main library folder is checked.
+In this case, scripts from the current directory's `my-extra-libs/` are loaded preferably, then the user's general library folder, and finally the main library folder is checked.
 
 ### Autohelp
 
@@ -178,15 +196,17 @@ Autohelp allows you to use documentation comments to produce help.
 
 	#%include autohelp.sh
 
-	autohelp:check "$@" # Detect --help string, print help, and exit
+	autohelp:check "$@" # Detect --help string; if found, print help, and exit
 
 When your script subsequently is run with the `--help` option, autohelp will *always* kick in, printing the help contents, and exiting.
 
 You can also call the help print routine from within your script using the `autohelp:print` command (does not cause the script to exit).
 
+See `bashdoc std/autohelp/sh` for more info.
+
 ### Debugging Tools
 
-`debug.sh` is part of the standard libararies, allowing you to print debug-level messages when the debug mode flag is set, as well as providing the ability to view and change variables of a runnin script.
+`debug.sh` is part of the standard libararies, allowing you to print debug-level messages when the debug mode flag is set, as well as providing the ability to view and change variables of a running script using the `debug:break` function.
 
 See `bashdoc std/debug.sh` for more info
 
@@ -200,14 +220,16 @@ See [the `tarsh` documentation](docs/tarsh.md) and the [myip](examples/myip) exa
 
 ## Examples
 
-Two primary examples are the [`bbuild`](src/bbuild) and [`bashdoc`](src/bashdoc) programs themselves written to be compiled by bash builder !
+Since Bash Builder is itself written in bash, you could study the tool itself for insight into how it is used.
+
+The primary examples are the [`bbuild`](src/bbuild), [`bbrun`](src/bbrun), and [`bashdoc`](src/bashdoc) programs themselves written to be compiled by bash builder !
 
 You can see an additional example project in [examples/ssh-connection-manager](examples/ssh-connection-manager)
 
-After installing bash-builder, you can `cd` to that directory and run `bbuild` to build the project.
+After installing bash-builder and re-sourcing your `.bashrc`, you can `cd` to that directory and run `bbuild` to build the project.
 
 	cd examples/ssh-connection-manager
-	bbuild
+	./build.sh
 	bin/connect --help
 
 You can also see a simple example of the use of multiple scripting languages combined into one through TarSH in the [examples/myip](examples/myip) folder

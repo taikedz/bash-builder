@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION_NUM=6.1.1
+VERSION_NUM=6.1.2
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {
@@ -1261,23 +1261,19 @@ setup_build_dir() {
     mkdir -p "$builddir" || out:fail "Cannot create the output directory '$builddir'!"
 }
 
-# checktags { FILENAME | TAG SPEC }
 checktags() {
-    if [[ -z "${1:-}" ]]; then return; fi
+    . <(args:use:local builtfile -- "$@") ; 
+    local tagsfound
 
     if [[ "${IGNORETAGS:-}" = unsafe ]]; then
         return
     fi
 
-    local tagsname="#%bbtags"
-    if [[ "$1" != "$tagsname" ]]; then
-        checktags $(grep "^$tagsname" "$1")
-        return
-    fi
-
-    shift; # first arg is the bbtag
+    tagsfound=(: $(grep -P '^#%bbtags' "$builtfile"|sed -r 's|^#%bbtags|| ; s|\s+|\n|g')) || :
+    debug:print "Tags found: ${tagsfound[*]:1}"
     
-    for tag in "$@"; do
+    for tag in "${tagsfound[@]:1}"; do
+        debug:print "Processing tag: $tag"
         case "$tag" in
             i:*)
                 out:info "TAGS: $tag"
