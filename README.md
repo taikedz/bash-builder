@@ -129,8 +129,8 @@ main "$@"
 Limitations:
 
 * This relies on the host having `bash-libs` installed and accessible to the user.
-* Cannot be used on scripts using `std/this.sh-->this:bindir` or anything relying on the location of `$0` (the running script itself)
-    * (use the `$BBRUN_SCRIPT` variable instead)
+* Cannot be used on scripts written to rely on the location of `$0` (the running script itself)
+    * use the `$BBRUN_SCRIPT` variable instead, or the `std/this.sh` lib (version from 2.1.6 onwards)
 
 ### `bashdoc`
 
