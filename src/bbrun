@@ -8,7 +8,7 @@ set -euo pipefail
 #
 # Suitable for use with a shebang line.
 #
-#   bbrun SCRIPT SCRIPT_ARGS ...
+#   bbrun SCRIPT ARGS ...
 #
 # bbrun uses a temp file in ~/.local/tmp with the same name as
 #  the original script.
@@ -54,9 +54,18 @@ make_private_script() {
     chmod 700 "$BUILTSCR"
 }
 
+$%function version_check(flag) {
+    if [[ "$flag" =~ ^--version$ ]]; then
+        echo "$BBRUN_VERSION"
+        exit 0
+    fi
+}
+
 $%function bbrun:main(bbscript) {
     local tempscr build_result BBRUN_SCRIPT
     build_result=0
+
+    version_check "$bbscript"
 
     tmpdir="$HOME/.local/tmp"
 
