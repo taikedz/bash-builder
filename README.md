@@ -106,9 +106,9 @@ copyfrom server.example.com myusername ./downloads /etc/hosts /home/user/backup.
 
 If fewer arguments than the number named are provided at runtime, the script/subshell will exit, detailing which variable could not be assigned.
 
-**Events**
+**Signal traps**
 
-You can declare "events" (signal traps) using a shorthand notation like so:
+You can declare signal traps using a tidy shorthand notation:
 
 ```sh
 
@@ -130,9 +130,9 @@ do_stuff() {
 }
 ```
 
-which will add a trap on the declared signals.
+which will add a trap on the declared signals. While running bash, run `trap -l` for a list of signals, and `help trap` for additional bash-specific signals.
 
-Note that trap/event functions do not take arguments.
+Note that trap functions do not take arguments.
 
 ### `bbrun`
 
