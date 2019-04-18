@@ -106,6 +106,34 @@ copyfrom server.example.com myusername ./downloads /etc/hosts /home/user/backup.
 
 If fewer arguments than the number named are provided at runtime, the script/subshell will exit, detailing which variable could not be assigned.
 
+**Events**
+
+You can declare "events" (signal traps) using a shorthand notation like so:
+
+```sh
+
+# Plain interrupt catchers
+
+$%on SIGINT SIGTERM int-or-term() {
+    echo "Got SIGINT or SIGTERM"
+}
+
+# Declare a trap within an event
+
+do_stuff() {
+    touch tmp1 tmp2
+
+    $%on EXIT regular_exit() {
+        # Cleanup
+        rm tmp1 tmp2
+    }
+}
+```
+
+which will add a trap on the declared signals.
+
+Note that trap/event functions do not take arguments.
+
 ### `bbrun`
 
 An executable that allows you to directly run scripts written for bash builder without a compilation step.

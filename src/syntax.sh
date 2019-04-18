@@ -1,3 +1,5 @@
+#%include std/out.sh
+
 ### Syntax Post-processing Usage:syntax
 #
 # Bash Builder adds some post-processing to built files
@@ -14,6 +16,7 @@ bbuild:syntax_post() {
 	local target="${1:-}"; shift || out:fail "No syntax post-processing target supplied !"
 	
     bbuild:syntax:expand_function_signatures "$target"
+    bbuild:syntax:expand_event_signatures "$target"
 }
 
 ### Function signature expansion Usage:syntax
@@ -36,6 +39,12 @@ bbuild:syntax_post() {
 # 	    }
 ###/doc
 bbuild:syntax:expand_function_signatures() {
-    sed -r 's/^(\s*)\$''%function\s*([a-zA-Z0-9_:.-]+)\(([^)]+?)\)\s+\{''/''\1\2() {\n\1    . <(args:use:local \3 -- "$@") ; ''/' -i "$1"
+    # $%function functionname(arg1 arg2) { ---> functionname() { . <(args:use:local arg1 arg2 -- "$@") ;
+    sed -r 's/^(\s*)\$''%function\s+([a-zA-Z0-9_:.-]+)\s*\(([^)]+?)\)\s*\{''/''\1\2() {\n\1    . <(args:use:local \3 -- "$@") ; ''/' -i "$1"
 }
 
+bbuild:syntax:expand_event_signatures() {
+    # $%on EVT1 EVT2 functionname() { ---> trap functionname EVT1 EVT2 \n functionname() {
+
+    sed -r 's/^\s*\$''%on\s+([A-Z0-9 ]+)\s+([a-zA-Z0-9._:-]+)\s*\(\)\s*\{/trap \2 \1\nfunction \2() {/' -i "$1"
+}
