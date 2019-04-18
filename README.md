@@ -114,7 +114,7 @@ You can declare signal traps using a tidy shorthand notation:
 
 # Plain interrupt catchers
 
-$%on SIGINT SIGTERM int-or-term() {
+$%trap SIGINT SIGTERM int-or-term() {
     echo "Got SIGINT or SIGTERM"
 }
 
@@ -123,7 +123,7 @@ $%on SIGINT SIGTERM int-or-term() {
 do_stuff() {
     touch tmp1 tmp2
 
-    $%on EXIT regular_exit() {
+    $%trap EXIT regular_exit() {
         # Cleanup
         rm tmp1 tmp2
     }

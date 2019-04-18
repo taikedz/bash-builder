@@ -7,7 +7,7 @@
 TESTS=(
     include-count
     function-signature
-    event
+    trap
 )
 
 move_to_here() {
@@ -28,7 +28,7 @@ f:count() {
     [[ "$("$@")" = "$i" ]]
 }
 
-$%function t:event(scriptfile) {
+$%function t:trap(scriptfile) {
     test:require grep "Came out" -q <("$scriptfile")
 }
 

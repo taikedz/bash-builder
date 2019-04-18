@@ -536,7 +536,7 @@ args:use:local() {
 TESTS=(
     include-count
     function-signature
-    event
+    trap
 )
 
 move_to_here() {
@@ -557,7 +557,7 @@ f:count() {
     [[ "$("$@")" = "$i" ]]
 }
 
-t:event() {
+t:trap() {
     . <(args:use:local scriptfile -- "$@") ; 
     test:require grep "Came out" -q <("$scriptfile")
 }

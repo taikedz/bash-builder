@@ -44,7 +44,7 @@ bbuild:syntax:expand_function_signatures() {
 }
 
 bbuild:syntax:expand_trap_signatures() {
-    # $%on SIG1 SIG2 functionname() { ---> trap functionname SIG1 SIG2 \n functionname() {
+    # $%trap SIG1 SIG2 functionname() { ---> trap functionname SIG1 SIG2 \n functionname() {
 
-    sed -r 's/^\s*\$''%on\s+([A-Z0-9 ]+)\s+([a-zA-Z0-9._:-]+)\s*\(\)\s*\{/trap \2 \1\nfunction \2() {/' -i "$1"
+    sed -r 's/^\s*\$''%trap\s+([A-Z0-9 ]+)\s+([a-zA-Z0-9._:-]+)\s*\(\)\s*\{/trap \2 \1\nfunction \2() {/' -i "$1"
 }

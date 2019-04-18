@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-$%on SIGINT SIGTERM EXIT dostuff() {
+$%trap SIGINT SIGTERM EXIT dostuff() {
     echo "Came out"
 }
