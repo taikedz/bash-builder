@@ -15,6 +15,7 @@ bbuild:syntax_post() {
 
 	local target="${1:-}"; shift || out:fail "No syntax post-processing target supplied !"
 	
+    bbuild:syntax:expand_event_signatures "$target"
     bbuild:syntax:expand_function_signatures "$target"
     bbuild:syntax:expand_trap_signatures "$target"
 }
@@ -47,4 +48,10 @@ bbuild:syntax:expand_trap_signatures() {
     # $%trap SIG1 SIG2 functionname() { ---> trap functionname SIG1 SIG2 \n functionname() {
 
     sed -r 's/^\s*\$''%trap\s+([A-Z0-9 ]+)\s+([a-zA-Z0-9._:-]+)\s*\(\)\s*\{/trap \2 \1\nfunction \2() {/' -i "$1"
+}
+
+bbuild:syntax:expand_event_signatures() {
+    # $%on EVENTS .... functionname( ---> event:subscribe functionname EVENTS ... \n '$'%function functionname(
+
+    sed -r 's/^\s*\$''%on\s+([a-zA-Z0-9_ ]+)\s+([a-zA-Z0-9._:-]+)\s*\(/event:subscribe \2 \1\n$''%function \2(/' -i "$1"
 }

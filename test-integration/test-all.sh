@@ -537,6 +537,7 @@ TESTS=(
     include-count
     function-signature
     trap
+    event
 )
 
 move_to_here() {
@@ -570,6 +571,11 @@ t:function-signature() {
 t:include-count() {
     . <(args:use:local scriptfile -- "$@") ; 
     test:require f:count 1 grep '##bash-libs: safe\.sh' -c "$scriptfile"
+}
+
+t:event() {
+    . <(args:use:local scriptfile -- "$@") ; 
+    test:require grep "_ev1_" -q <("$scriptfile")
 }
 
 main() {

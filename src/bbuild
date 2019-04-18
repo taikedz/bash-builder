@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION_NUM=6.2.2
+VERSION_NUM=6.3
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {

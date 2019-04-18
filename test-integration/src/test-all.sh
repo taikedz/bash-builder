@@ -8,6 +8,7 @@ TESTS=(
     include-count
     function-signature
     trap
+    event
 )
 
 move_to_here() {
@@ -38,6 +39,10 @@ $%function t:function-signature(scriptfile) {
 
 $%function t:include-count(scriptfile) {
     test:require f:count 1 grep '##bash-libs: safe\.sh' -c "$scriptfile"
+}
+
+$%function t:event(scriptfile) {
+    test:require grep "_ev1_" -q <("$scriptfile")
 }
 
 main() {

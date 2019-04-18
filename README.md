@@ -106,6 +106,35 @@ copyfrom server.example.com myusername ./downloads /etc/hosts /home/user/backup.
 
 If fewer arguments than the number named are provided at runtime, the script/subshell will exit, detailing which variable could not be assigned.
 
+You need to have `#%include std/syntax-extensions.sh` in your inclusions for this to work.
+
+**Events**
+
+A lightweight form event-style programming is implemented. You can "subscribe" a function to an event, and trigger events to cause all subscribed functions to execute.
+
+```sh
+#%include std/syntax-extensions.sh
+#%include std/event.sh
+
+# Regular function declaration
+say_hi() { echo "Hi"; }
+say_bye() { echo "Bye"; }
+
+# Subscribing functions
+event:subscribe say_hello greeting
+event:subscribe say_bye leaving
+
+# Declare and subscribe at the same time
+#  Short hand event declaration, works with named arguments
+$%on greeting leaving say_ciao(eventname) { echo "Ciao ($eventname)"; }
+
+event:trigger greeting # Causes both 'say_hi' and 'say_ciao' to run!
+```
+
+The first argument passed to an event handler is alwyas the event name.
+
+You need to `'#%include` the `std/event.sh` library (bash-libs 2.2+) for this to work.
+
 **Signal traps**
 
 You can declare signal traps using a tidy shorthand notation:

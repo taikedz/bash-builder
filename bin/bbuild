@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION_NUM=6.2.2
+VERSION_NUM=6.3
 VERSION_NOTE="See https://github.com/taikedz/bbuild"
 
 [[ "$*" = --version ]] && {
@@ -51,7 +51,7 @@ VERSION_NOTE="See https://github.com/taikedz/bbuild"
 #
 ###/doc
 
-##bash-libs: safe.sh @ 60378968 (2.1.6)
+##bash-libs: safe.sh @ 1c8102e3 (after 2.1.6)
 
 ### Safe mode Usage:bbuild
 #
@@ -113,7 +113,7 @@ safe:glob() {
 
 set -eufo pipefail
 safe:space-split off
-##bash-libs: tty.sh @ 60378968 (2.1.6)
+##bash-libs: tty.sh @ 1c8102e3 (after 2.1.6)
 
 tty:is_ssh() {
     [[ -n "$SSH_TTY" ]] || [[ -n "$SSH_CLIENT" ]] || [[ "$SSH_CONNECTION" ]]
@@ -123,7 +123,7 @@ tty:is_pipe() {
     [[ ! -t 1 ]]
 }
 
-##bash-libs: colours.sh @ 60378968 (2.1.6)
+##bash-libs: colours.sh @ 1c8102e3 (after 2.1.6)
 
 ### Colours for terminal Usage:bbuild
 # A series of shorthand colour flags for use in outputs, and functions to set your own flags.
@@ -276,7 +276,7 @@ colours:auto() {
 
 colours:auto
 
-##bash-libs: out.sh @ 60378968 (2.1.6)
+##bash-libs: out.sh @ 1c8102e3 (after 2.1.6)
 
 ### Console output handlers Usage:bbuild
 #
@@ -364,7 +364,7 @@ function out:error {
     echo "${CBRED}ERROR: ${CRED}$*$CDEF" 1>&2
 }
 
-##bash-libs: syntax-extensions.sh @ 60378968 (2.1.6)
+##bash-libs: syntax-extensions.sh @ 1c8102e3 (after 2.1.6)
 
 ### Syntax Extensions Usage:syntax
 #
@@ -477,8 +477,79 @@ syntax-extensions:use:local() {
 args:use:local() {
     syntax-extensions:use:local "$@"
 }
+##bash-libs: patterns.sh @ 1c8102e3 (after 2.1.6)
 
-##bash-libs: autohelp.sh @ 60378968 (2.1.6)
+### Useful patterns Usage:bbuild
+#
+# Some useful regex patterns, exported as environment variables.
+#
+# They are not foolproof, and you are encouraged to improve upon them.
+#
+# $PAT_blank - detects whether an entire line is empty or whitespace
+# $PAT_comment - detects whether is a line is a script comment (assumes '#' as the comment marker)
+# $PAT_num - detects whether the string is an integer number in its entirety
+# $PAT_cvar - detects if the string is a valid C variable name
+# $PAT_filename - detects if the string is a safe UNIX or Windows file name;
+#   does not allow presence of whitespace or special characters aside from '_', '.', '-'
+# $PAT_email - simple heuristic to determine whether a string looks like a valid email address
+#
+###/doc
+
+export PAT_blank='^\s*$'
+export PAT_comment='^\s*(#.*)?$'
+export PAT_num='^[0-9]+$'
+export PAT_cvar='^[a-zA-Z_][a-zA-Z0-9_]*$'
+export PAT_filename='^[a-zA-Z0-9_.-]$'
+export PAT_email="$PAT_filename@$PAT_filename.$PAT_cvar"
+
+### Formatting library Usage:bbuild
+#
+# Some convenience functions for formatting output.
+#
+###/doc
+
+### format:columns [SEP] Usage:bbuild
+#
+# Redirect input or pipe into this function to print columns using separator
+#  (default is tab character).
+#
+# Each line is split along the separator characters (each individual character is a
+#  separator, and the column widths are adjusted to the widest member of all rows.
+#
+# e.g.
+#
+#    format:columns ':' < /etc/passwd
+#
+#    grep January report.tsv | format:column
+#
+###/doc
+
+format:columns() {
+    . <(args:use:local ?sep -- "$@") ; 
+    [[ -n "$sep" ]] || sep=$'\t'
+
+    column -t -s "$sep"
+}
+
+### format:wrap Usage:bbuild
+#
+# Pipe or redirect into this function to soft-wrap text along spaces to terminal
+#  width, or specified width.
+#
+# e.g.
+#
+#   format:wrap 40 < README.md
+#
+###/doc
+
+format:wrap() {
+    . <(args:use:local ?cols -- "$@") ; 
+    [[ -n "$cols" ]] || cols="$(tput cols)"
+    [[ "$cols" =~ $PAT_num ]] || return 1
+    fold -w "$cols" -s
+}
+
+##bash-libs: autohelp.sh @ 1c8102e3 (after 2.1.6)
 
 ### Autohelp Usage:bbuild
 #
@@ -670,38 +741,13 @@ autohelp:check:section() {
 
     for arg in "$@"; do
         if [[ "$arg" =~ --help ]]; then
-            cols="$(tput cols)"
-            autohelp:print "$section" | fold -w "$cols" -s || autohelp:print "$section"
+            autohelp:print "$section" | format:wrap
             exit 0
         fi
     done
 }
-##bash-libs: patterns.sh @ 60378968 (2.1.6)
 
-### Useful patterns Usage:bbuild
-#
-# Some useful regex patterns, exported as environment variables.
-#
-# They are not foolproof, and you are encouraged to improve upon them.
-#
-# $PAT_blank - detects whether an entire line is empty or whitespace
-# $PAT_comment - detects whether is a line is a script comment (assumes '#' as the comment marker)
-# $PAT_num - detects whether the string is an integer number in its entirety
-# $PAT_cvar - detects if the string is a valid C variable name
-# $PAT_filename - detects if the string is a safe UNIX or Windows file name;
-#   does not allow presence of whitespace or special characters aside from '_', '.', '-'
-# $PAT_email - simple heuristic to determine whether a string looks like a valid email address
-#
-###/doc
-
-export PAT_blank='^\s*$'
-export PAT_comment='^\s*(#.*)?$'
-export PAT_num='^[0-9]+$'
-export PAT_cvar='^[a-zA-Z_][a-zA-Z0-9_]*$'
-export PAT_filename='^[a-zA-Z0-9_.-]$'
-export PAT_email="$PAT_filename@$PAT_filename.$PAT_cvar"
-
-##bash-libs: args.sh @ 60378968 (2.1.6)
+##bash-libs: args.sh @ 1c8102e3 (after 2.1.6)
 
 ### args Usage:bbuild
 #
@@ -842,7 +888,7 @@ args:after() {
     RETARR_ARGSAFTER=("$@")
 }
 
-##bash-libs: debug.sh @ 60378968 (2.1.6)
+##bash-libs: debug.sh @ 1c8102e3 (after 2.1.6)
 
 ### Debug lib Usage:bbuild
 #
@@ -906,7 +952,7 @@ function debug:print {
 #
 # Or use this to mask a command's output unless in debug mode
 #
-#   which binary 2>&1 | debug:dump >/dev/null
+#   which binary 2>&1 | debug:dump
 #
 ###/doc
 function debug:dump {
@@ -931,7 +977,7 @@ function debug:dump {
 #
 # Type a variable name, with leading `$`, to dump it, e.g. `$myvar`
 #
-# Type a variable name, with leading `$`, follwoed by an assignment to change its value, e.g. `$myvar=new value`
+# Type a variable name, with leading `$`, followed by an assignment to change its value, e.g. `$myvar=new value`
 #  the new value will be seen by the script.
 #
 # Type 'env' to dump the current environment variables.
@@ -989,7 +1035,7 @@ debug:_break_dump() {
     fi
 }
 
-##bash-libs: searchpaths.sh @ 60378968 (2.1.6)
+##bash-libs: searchpaths.sh @ 1c8102e3 (after 2.1.6)
 
 # FIXME - set function signature in head of help
 ### searchpaths:file_from PATHDEF FILE Usage:bbuild
@@ -1030,7 +1076,7 @@ function searchpaths:file_from {
     return 1
 }
 
-##bash-libs: includefile2.sh @ 60378968 (2.1.6)
+##bash-libs: includefile2.sh @ 1c8102e3 (after 2.1.6)
 
 ### File Inclusion Usage:bbuild
 # Library for including (once) or inserting (any time called) external files ontents
@@ -1141,7 +1187,7 @@ includefile:_cat_once() {
 includefile:cleanup() {
     rm ./._include-*
 }
-##bash-libs: bincheck.sh @ 60378968 (2.1.6)
+##bash-libs: bincheck.sh @ 1c8102e3 (after 2.1.6)
 
 ### bincheck:get COMMANDS ... Usage:bbuild
 #
@@ -1230,6 +1276,7 @@ bbuild:syntax_post() {
 
 	local target="${1:-}"; shift || out:fail "No syntax post-processing target supplied !"
 	
+    bbuild:syntax:expand_event_signatures "$target"
     bbuild:syntax:expand_function_signatures "$target"
     bbuild:syntax:expand_trap_signatures "$target"
 }
@@ -1262,6 +1309,12 @@ bbuild:syntax:expand_trap_signatures() {
     # $%trap SIG1 SIG2 functionname() { ---> trap functionname SIG1 SIG2 \n functionname() {
 
     sed -r 's/^\s*\$''%trap\s+([A-Z0-9 ]+)\s+([a-zA-Z0-9._:-]+)\s*\(\)\s*\{/trap \2 \1\nfunction \2() {/' -i "$1"
+}
+
+bbuild:syntax:expand_event_signatures() {
+    # $%on EVENTS .... functionname( ---> event:subscribe functionname EVENTS ... \n '$'%function functionname(
+
+    sed -r 's/^\s*\$''%on\s+([a-zA-Z0-9_ ]+)\s+([a-zA-Z0-9._:-]+)\s*\(/event:subscribe \2 \1\n$''%function \2(/' -i "$1"
 }
 
 setup_build_dir() {
