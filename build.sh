@@ -15,9 +15,19 @@ _has() {
 }
 
 _build() {
-    bin/bbuild "$@" || {
+    f:bbuild "$@" || {
         BUILDSTATUS=$((BUILDSTATUS+1))
         return
+    }
+}
+
+use_bootstrap_script() {
+    # running bin/bbuild to re-write itself leads to spurious
+    # errors. Use a separate bootstrapping copy
+    mkdir -p bin-candidates
+    cp bin/bbuild bin-candidates/bbuild-bootstrap
+    f:bbuild() {
+        bin-candidates/bbuild-bootstrap "$@"
     }
 }
 
@@ -25,8 +35,13 @@ set_build_outdir() {
     # By default, do NOT blat previous release !
     export BUILDOUTD=bin-candidates/
     RUN_TESTS=true
+    f:bbuild() {
+        bin/bbuild "$@"
+    }
 
     if [[ "$*" =~ --release ]]; then
+        use_bootstrap_script
+
         export BUILDOUTD=bin/
         RUN_TESTS=false
     fi
@@ -43,7 +58,7 @@ run_tests() {
 main() {
     local all_scripts=(bbuild bbrun bashdoc tarshc)
 
-    set_build_outdir
+    set_build_outdir "$@"
     BUILDSTATUS=0
 
     if [[ -n "$*" ]] && [[ ! "$*" = --release ]]; then # Build specific
